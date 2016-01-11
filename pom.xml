@@ -1,0 +1,107 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.cloudera.director</groupId>
+	<version>1.0.0</version>
+	<artifactId>vsphere-provider</artifactId>
+	<packaging>jar</packaging>
+	<name>Cloudera Director Vsphere Plugin</name>
+	<url>http://maven.apache.org</url>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+		<launcher-class>com.cloudera.director.vsphere.VsphereLauncher</launcher-class>
+		<director-spi-v1.version>1.0.0</director-spi-v1.version>
+		<maven-compiler-plugin.version>3.3</maven-compiler-plugin.version>
+		<java.source.version>1.6</java.source.version>
+		<java.target.version>1.6</java.target.version>
+		<slf4j.version>1.7.5</slf4j.version>
+		<typesafe-config.version>1.2.0</typesafe-config.version>
+
+		<vijava.jar>vijava.jar</vijava.jar>
+		<vijava.groupId>com.vmware.vsphere</vijava.groupId>
+		<vijava.artifactId>vijava</vijava.artifactId>
+		<vijava.version>5.5</vijava.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.cloudera.director</groupId>
+			<artifactId>director-spi-v1</artifactId>
+			<version>${director-spi-v1.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${vijava.groupId}</groupId>
+			<artifactId>${vijava.artifactId}</artifactId>
+			<version>${vijava.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.typesafe</groupId>
+			<artifactId>config</artifactId>
+			<version>${typesafe-config.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>${slf4j.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.1</version>
+         </dependency>
+	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>cloudera.repo</id>
+			<url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
+			<name>Cloudera Repository</name>
+		</repository>
+	</repositories>
+
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>${maven-compiler-plugin.version}</version>
+					<configuration>
+						<source>${java.source.version}</source>
+						<target>${java.target.version}</target>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+					<finalName>vsphere-provider-${version}</finalName>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>
