@@ -32,12 +32,26 @@ public interface IVmService {
     * @param diskSize
     * @param diskMode
     */
-   void addDisk(String vmName, int diskSize, String diskMode);
+   void addSwapDisk(String vmName, int diskSize, String diskMode);
+
+   /**
+    * @param vmName
+    * @param diskSize
+    * @param diskMode
+    */
+   void addDataDisk(String vmName, int diskSize, String diskMode);
 
    /**
     * @param vmName
     * @return
     */
    VirtualMachine getVirtualMachine(String vmName);
+
+   /**
+    * @param vmName
+    * @param operation
+    * @param netName
+    */
+   void nicOps(String vmName, String operation, String netName);
 
 }

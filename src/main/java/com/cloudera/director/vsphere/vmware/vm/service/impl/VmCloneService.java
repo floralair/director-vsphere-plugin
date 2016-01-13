@@ -36,13 +36,13 @@ public class VmCloneService implements IVmCloneService{
    private final VirtualMachine vm;
    private final String cloneName;
    private final String numCPUs;
-   private final String memoryMB;
+   private final String memoryGB;
 
-   public VmCloneService(VirtualMachine vm, String cloneName, String numCPUs, String memoryMB) {
+   public VmCloneService(VirtualMachine vm, String cloneName, String numCPUs, String memoryGB) {
       this.vm = vm;
       this.cloneName = cloneName;
       this.numCPUs = numCPUs;
-      this.memoryMB = memoryMB;
+      this.memoryGB = memoryGB;
    }
 
    @Override
@@ -60,7 +60,7 @@ public class VmCloneService implements IVmCloneService{
 
       VirtualMachineConfigSpec vmSpec = new VirtualMachineConfigSpec();
       vmSpec.setName(cloneName);
-      vmSpec.setMemoryMB(Long.parseLong(memoryMB));
+      vmSpec.setMemoryMB(Long.parseLong(memoryGB) * 1024);
       vmSpec.setNumCPUs(Integer.parseInt(numCPUs));
       cloneSpec.setConfig(vmSpec);
 

@@ -83,7 +83,7 @@ public static List<ConfigurationProperty> getConfigurationProperties() {
     numCPUs = configuration.getConfigurationValue(
           VSphereComputeInstanceTemplateConfigurationPropertyToken.CPU_NUM,localizationContext);
     memorySize = configuration.getConfigurationValue(
-          VSphereComputeInstanceTemplateConfigurationPropertyToken.MEM_SIZE,localizationContext);
+          VSphereComputeInstanceTemplateConfigurationPropertyToken.MEM_SIZE_GB,localizationContext);
     diskType = configuration.getConfigurationValue(
           VSphereComputeInstanceTemplateConfigurationPropertyToken.DISK_TYPE,localizationContext);
     dataDiskSize = configuration.getConfigurationValue(

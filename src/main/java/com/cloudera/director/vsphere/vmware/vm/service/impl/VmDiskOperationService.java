@@ -26,7 +26,23 @@ public class VmDiskOperationService implements IVmDiskOperationService {
    }
 
    @Override
-   public void addDisk(int diskSize, String diskMode) {
+   public void addSwapDisk(int diskSize, String diskMode) {
+      VirtualMachineConfigSpec vmConfigSpec = new VirtualMachineConfigSpec();
+      VirtualDeviceConfigSpec vdiskSpec;
+      try {
+         vdiskSpec = createAddDiskConfigSpec(vm, diskSize, diskMode);
+         VirtualDeviceConfigSpec [] vdiskSpecArray = {vdiskSpec};
+         vmConfigSpec.setDeviceChange(vdiskSpecArray);
+         Task task = vm.reconfigVM_Task(vmConfigSpec);
+         task.waitForMe();
+      } catch (Exception e) {
+         // TODO Auto-generated catch block
+         e.printStackTrace();
+      }
+   }
+
+   @Override
+   public void addDataDisk(int diskSize, String diskMode) {
       VirtualMachineConfigSpec vmConfigSpec = new VirtualMachineConfigSpec();
       VirtualDeviceConfigSpec vdiskSpec;
       try {
@@ -74,7 +90,7 @@ public class VmDiskOperationService implements IVmDiskOperationService {
       disk.setControllerKey(key);
       disk.setUnitNumber(unitNumber);
       disk.setBacking(diskfileBacking);
-      disk.setCapacityInKB(1024 * diskSize);
+      disk.setCapacityInKB(1024 * 1024 * diskSize);
       disk.setKey(-1);
 
       diskSpec.setOperation(VirtualDeviceConfigSpecOperation.add);

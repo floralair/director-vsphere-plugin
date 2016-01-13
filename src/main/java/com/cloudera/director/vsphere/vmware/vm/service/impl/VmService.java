@@ -29,11 +29,11 @@ public class VmService implements IVmService {
    }
 
    @Override
-   public void clone(String vmName, String cloneName, String numCPUs, String memoryMB) {
+   public void clone(String vmName, String cloneName, String numCPUs, String memoryGB) {
 
       VirtualMachine vm = getVirtualMachine(vmName);
 
-      VmCloneService vMCloneService = new VmCloneService(vm, cloneName, numCPUs, memoryMB);
+      VmCloneService vMCloneService = new VmCloneService(vm, cloneName, numCPUs, memoryGB);
       vMCloneService.run();
    }
 
@@ -71,12 +71,34 @@ public class VmService implements IVmService {
    }
 
    @Override
-   public void addDisk(String vmName, int diskSize, String diskMode) {
+   public void addDataDisk(String vmName, int diskSize, String diskMode) {
       VirtualMachine vm = getVirtualMachine(vmName);
 
       VmDiskOperationService vmDiskOperationService = new VmDiskOperationService(vm);
-      vmDiskOperationService.addDisk(diskSize, diskMode);
+      vmDiskOperationService.addDataDisk(diskSize, diskMode);
 
+   }
+
+   @Override
+   public void addSwapDisk(String vmName, int diskSize, String diskMode) {
+      VirtualMachine vm = getVirtualMachine(vmName);
+
+      VmDiskOperationService vmDiskOperationService = new VmDiskOperationService(vm);
+      vmDiskOperationService.addSwapDisk(diskSize, diskMode);
+   }
+
+   @Override
+   public void nicOps(String vmName, String operation, String netName) {
+      VirtualMachine vm = getVirtualMachine(vmName);
+
+      VmNicOperationService vmNicOperationService = new VmNicOperationService(vm, operation, netName);
+
+      try {
+         vmNicOperationService.run();
+      } catch (Exception e) {
+         // TODO Auto-generated catch block
+         e.printStackTrace();
+      }
    }
 
    @Override

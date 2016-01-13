@@ -122,7 +122,11 @@ public class VSphereComputeProvider
       LOG.info("Begin to clone vm: " + decoratedInstanceName + ". The instanceId is " +instanceId);
       vmService.clone(template.getTemplateVm(), decoratedInstanceName, template.getNumCPUs(), template.getMemorySize());
 
-      vmService.addDisk(decoratedInstanceName, Integer.parseInt(template.getDataDiskSize()), VirtualDiskMode.independent_persistent.toString());
+//      vmService.nicOps(decoratedInstanceName, "add", template.getNetwork());
+
+      vmService.addSwapDisk(decoratedInstanceName, Integer.parseInt(template.getMemorySize()), VirtualDiskMode.independent_persistent.toString());
+
+      vmService.addDataDisk(decoratedInstanceName, Integer.parseInt(template.getDataDiskSize()), VirtualDiskMode.independent_persistent.toString());
 
       LOG.info("Begin to start the clone vm: " + decoratedInstanceName + ". The instanceId is " +instanceId);
       vmService.powerOps(decoratedInstanceName, "poweron");

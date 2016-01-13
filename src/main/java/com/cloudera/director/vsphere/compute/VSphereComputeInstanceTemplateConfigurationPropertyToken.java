@@ -21,13 +21,14 @@ public enum VSphereComputeInstanceTemplateConfigurationPropertyToken
           .required(true)
           .build()),
 
-  MEM_SIZE(new SimpleConfigurationPropertyBuilder()
-          .configKey("memorySize")
-          .name("Memory")
-          .defaultDescription(
-                  "The MEMORY size")
-          .defaultValue("2048")
+  MEM_SIZE_GB(new SimpleConfigurationPropertyBuilder()
+          .configKey("memorySizeGB")
+          .name("Memory (GB)")
+          .defaultDescription("The memory size (in GB)")
+          .defaultValue("2")
           .required(true)
+          .widget(ConfigurationProperty.Widget.NUMBER)
+          .type(Property.Type.INTEGER)
           .build()),
 
   TYPE(new SimpleConfigurationPropertyBuilder()
