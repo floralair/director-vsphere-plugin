@@ -1,9 +1,9 @@
 /**
  *
  */
-package com.cloudera.director.vsphere.vmware.vm.service.impl;
+package com.cloudera.director.vsphere.vm.service.impl;
 
-import com.cloudera.director.vsphere.vmware.vm.service.intf.IVmDiskOperationService;
+import com.cloudera.director.vsphere.vm.service.intf.IVmDiskOperationService;
 import com.vmware.vim25.DatastoreSummary;
 import com.vmware.vim25.VirtualDevice;
 import com.vmware.vim25.VirtualDeviceConfigSpec;
@@ -26,7 +26,7 @@ public class VmDiskOperationService implements IVmDiskOperationService {
    }
 
    @Override
-   public void addSwapDisk(int diskSize, String diskMode) {
+   public void addSwapDisk(String targetDatastoreName, long diskSize, String diskMode) {
       VirtualMachineConfigSpec vmConfigSpec = new VirtualMachineConfigSpec();
       VirtualDeviceConfigSpec vdiskSpec;
       try {
@@ -42,7 +42,7 @@ public class VmDiskOperationService implements IVmDiskOperationService {
    }
 
    @Override
-   public void addDataDisk(int diskSize, String diskMode) {
+   public void addDataDisk(String targetDatastoreName, long diskSize, String diskMode) {
       VirtualMachineConfigSpec vmConfigSpec = new VirtualMachineConfigSpec();
       VirtualDeviceConfigSpec vdiskSpec;
       try {
@@ -57,7 +57,7 @@ public class VmDiskOperationService implements IVmDiskOperationService {
       }
    }
 
-   private VirtualDeviceConfigSpec createAddDiskConfigSpec(VirtualMachine vm, int diskSize, String diskMode) throws Exception
+   private VirtualDeviceConfigSpec createAddDiskConfigSpec(VirtualMachine vm, long diskSize, String diskMode) throws Exception
    {
       VirtualDeviceConfigSpec diskSpec = new VirtualDeviceConfigSpec();
       VirtualMachineConfigInfo vmConfig = vm.getConfig();
@@ -99,7 +99,7 @@ public class VmDiskOperationService implements IVmDiskOperationService {
       return diskSpec;
    }
 
-   private String getFreeDatastoreName(VirtualMachine vm, int size) throws Exception {
+   private String getFreeDatastoreName(VirtualMachine vm, long size) throws Exception {
       String dsName = null;
       Datastore[] datastores = vm.getDatastores();
       for(int i=0; i<datastores.length; i++) {

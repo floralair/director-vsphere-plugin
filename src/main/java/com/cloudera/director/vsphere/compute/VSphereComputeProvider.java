@@ -29,9 +29,9 @@ import com.cloudera.director.spi.v1.provider.ResourceProviderMetadata;
 import com.cloudera.director.spi.v1.provider.util.SimpleResourceProviderMetadata;
 import com.cloudera.director.spi.v1.util.ConfigurationPropertiesUtil;
 import com.cloudera.director.vsphere.VSphereCredentials;
-import com.cloudera.director.vsphere.vmware.vm.service.impl.VmService;
-import com.cloudera.director.vsphere.vmware.vm.service.intf.IVmService;
-import com.vmware.vim25.VirtualDiskMode;
+import com.cloudera.director.vsphere.exception.VsphereDirectorException;
+import com.cloudera.director.vsphere.service.impl.GroupProvisionService;
+import com.cloudera.director.vsphere.service.intf.IGroupProvisionService;
 
 
 /**
@@ -43,148 +43,132 @@ import com.vmware.vim25.VirtualDiskMode;
  * A provider for compute resources that works with a predefined list of hosts.
  */
 public class VSphereComputeProvider
-    extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTemplate> {
+extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTemplate> {
 
-  private static final Logger LOG = Logger.getLogger(VSphereComputeProvider.class.getName());
+   private static final Logger LOG = Logger.getLogger(VSphereComputeProvider.class.getName());
 
-  protected static final List<ConfigurationProperty> CONFIGURATION_PROPERTIES =
-      ConfigurationPropertiesUtil.asConfigurationPropertyList(VSphereComputeProviderConfigurationPropertyToken.values());
+   protected static final List<ConfigurationProperty> CONFIGURATION_PROPERTIES =
+         ConfigurationPropertiesUtil.asConfigurationPropertyList(VSphereComputeProviderConfigurationPropertyToken.values());
 
-  public static final String ID = "compute";
+   public static final String ID = "compute";
 
-  public static final ResourceProviderMetadata METADATA = SimpleResourceProviderMetadata.builder()
-      .id(ID)
-      .name("vCenter Server")
-      .description("Allocates instances from a predefined list")
-      .providerClass(VSphereComputeProvider.class)
-      .providerConfigurationProperties(CONFIGURATION_PROPERTIES)
-      .resourceTemplateConfigurationProperties(
-          VSphereComputeInstanceTemplate.getConfigurationProperties())
-      .build();
+   public static final ResourceProviderMetadata METADATA = SimpleResourceProviderMetadata.builder()
+         .id(ID)
+         .name("vCenter Server")
+         .description("Allocates instances from a predefined list")
+         .providerClass(VSphereComputeProvider.class)
+         .providerConfigurationProperties(CONFIGURATION_PROPERTIES)
+         .resourceTemplateConfigurationProperties(
+               VSphereComputeInstanceTemplate.getConfigurationProperties())
+               .build();
 
-  private final Deque<String> availableHosts = new ArrayDeque<String>();
-  private final Map<String, String> allocations = new HashMap<String, String>();
-  private final VSphereCredentials credentials;
-  private final Configured configuration;
+   private final Deque<String> availableHosts = new ArrayDeque<String>();
+   private final Map<String, String> allocations = new HashMap<String, String>();
+   private final VSphereCredentials credentials;
+   private final Configured configuration;
 
-  private final ConfigurationValidator resourceTemplateConfigurationValidator;
+   private final ConfigurationValidator resourceTemplateConfigurationValidator;
 
-  public VSphereComputeProvider(Configured configuration, LocalizationContext cloudLocalizationContext) {
-    super(configuration, METADATA, cloudLocalizationContext);
+   public VSphereComputeProvider(Configured configuration, LocalizationContext cloudLocalizationContext) {
+      super(configuration, METADATA, cloudLocalizationContext);
 
-    String vcServer = configuration.getConfigurationValue(VSphereComputeProviderConfigurationPropertyToken.VC_SERVER, cloudLocalizationContext);
-    String vcPort = configuration.getConfigurationValue(VSphereComputeProviderConfigurationPropertyToken.VC_SERVER_PORT, cloudLocalizationContext);
-    String vcUsername = configuration.getConfigurationValue(VSphereComputeProviderConfigurationPropertyToken.VC_SERVER_USERNAME, cloudLocalizationContext);
-    String vcPassword = configuration.getConfigurationValue(VSphereComputeProviderConfigurationPropertyToken.VC_SERVER_PASSWORD, cloudLocalizationContext);
-    this.credentials = new VSphereCredentials(vcServer, vcPort, vcUsername, vcPassword);
+      String vcServer = configuration.getConfigurationValue(VSphereComputeProviderConfigurationPropertyToken.VC_SERVER, cloudLocalizationContext);
+      String vcPort = configuration.getConfigurationValue(VSphereComputeProviderConfigurationPropertyToken.VC_SERVER_PORT, cloudLocalizationContext);
+      String vcUsername = configuration.getConfigurationValue(VSphereComputeProviderConfigurationPropertyToken.VC_SERVER_USERNAME, cloudLocalizationContext);
+      String vcPassword = configuration.getConfigurationValue(VSphereComputeProviderConfigurationPropertyToken.VC_SERVER_PASSWORD, cloudLocalizationContext);
+      this.credentials = new VSphereCredentials(vcServer, vcPort, vcUsername, vcPassword);
 
-    this.configuration = configuration;
+      this.configuration = configuration;
 
-    this.resourceTemplateConfigurationValidator =
-        new CompositeConfigurationValidator(METADATA.getResourceTemplateConfigurationValidator(),
-            new VSphereComputeInstanceTemplateConfigurationValidator(this));
-  }
+      this.resourceTemplateConfigurationValidator =
+            new CompositeConfigurationValidator(METADATA.getResourceTemplateConfigurationValidator(),
+                  new VSphereComputeInstanceTemplateConfigurationValidator(this));
+   }
 
-  synchronized Deque<String> getAvailableHosts() {
-    return availableHosts;
-  }
+   synchronized Deque<String> getAvailableHosts() {
+      return availableHosts;
+   }
 
-  synchronized Map<String, String> getAllocations() {
-    return allocations;
-  }
+   synchronized Map<String, String> getAllocations() {
+      return allocations;
+   }
 
-  @Override
-  public ConfigurationValidator getResourceTemplateConfigurationValidator() {
-    return resourceTemplateConfigurationValidator;
-  }
+   @Override
+   public ConfigurationValidator getResourceTemplateConfigurationValidator() {
+      return resourceTemplateConfigurationValidator;
+   }
 
-  @Override
-  public Resource.Type getResourceType() {
-    return AbstractComputeInstance.TYPE;
-  }
+   @Override
+   public Resource.Type getResourceType() {
+      return AbstractComputeInstance.TYPE;
+   }
 
-  @Override
-  public VSphereComputeInstanceTemplate createResourceTemplate(
-      String name, Configured configuration, Map<String, String> tags) {
-    return new VSphereComputeInstanceTemplate(name, configuration, tags, getLocalizationContext());
-  }
+   @Override
+   public VSphereComputeInstanceTemplate createResourceTemplate(
+         String name, Configured configuration, Map<String, String> tags) {
+      return new VSphereComputeInstanceTemplate(name, configuration, tags, getLocalizationContext());
+   }
 
-  @Override
-  public synchronized void allocate(VSphereComputeInstanceTemplate template,
-      Collection<String> instanceIds, int minCount) throws InterruptedException {
+   @Override
+   public synchronized void allocate(VSphereComputeInstanceTemplate template,
+         Collection<String> instanceIds, int minCount) throws InterruptedException {
 
-    LocalizationContext providerLocalizationContext = getLocalizationContext();
-        LocalizationContext templateLocalizationContext = SimpleResourceTemplate.getTemplateLocalizationContext(providerLocalizationContext);
-    for (String instanceId : instanceIds) {
-      String decoratedInstanceName = decorateInstanceName(template, instanceId, templateLocalizationContext);
-      IVmService vmService = new VmService(this.credentials);
+      LocalizationContext providerLocalizationContext = getLocalizationContext();
+      LocalizationContext templateLocalizationContext = SimpleResourceTemplate.getTemplateLocalizationContext(providerLocalizationContext);
 
-      LOG.info("Begin to clone vm: " + decoratedInstanceName + ". The instanceId is " +instanceId);
-      vmService.clone(template.getTemplateVm(), decoratedInstanceName, template.getNumCPUs(), template.getMemorySize());
-
-//      vmService.nicOps(decoratedInstanceName, "add", template.getNetwork());
-
-      vmService.addSwapDisk(decoratedInstanceName, Integer.parseInt(template.getMemorySize()), VirtualDiskMode.independent_persistent.toString());
-
-      vmService.addDataDisk(decoratedInstanceName, Integer.parseInt(template.getDataDiskSize()), VirtualDiskMode.independent_persistent.toString());
-
-      LOG.info("Begin to start the clone vm: " + decoratedInstanceName + ". The instanceId is " +instanceId);
-      vmService.powerOps(decoratedInstanceName, "poweron");
-
-      String vmIpAddress = vmService.getIpaddress(decoratedInstanceName);
-      allocations.put(instanceId, vmIpAddress);
-      LOG.info("instanceId: " + instanceId + " ipaddress: " + vmIpAddress);
-    }
-  }
-
-  private static String decorateInstanceName(VSphereComputeInstanceTemplate template, String currentId, LocalizationContext templateLocalizationContext) {
-    return template.getConfigurationValue(INSTANCE_NAME_PREFIX, templateLocalizationContext) + "-" + currentId;
-  }
-
-  @Override
-  public synchronized Collection<VSphereComputeInstance> find(
-      VSphereComputeInstanceTemplate template, Collection<String> instanceIds)
-      throws InterruptedException {
-
-    List<VSphereComputeInstance> result = new ArrayList<VSphereComputeInstance>();
-    for (String currentId : instanceIds) {
-      String host = allocations.get(currentId);
-      if (host != null) {
-        try {
-          result.add(new VSphereComputeInstance(template, currentId, InetAddress.getByName(host)));
-
-        } catch (UnknownHostException e) {
-          throw new RuntimeException(e);
-        }
+      IGroupProvisionService groupProvisionService = new GroupProvisionService(this.credentials, template, template.getConfigurationValue(INSTANCE_NAME_PREFIX, templateLocalizationContext), instanceIds, minCount);
+      try {
+         groupProvisionService.provision();
+         this.allocations.putAll(groupProvisionService.getAllocations());
+      } catch (Exception e) {
+         throw new VsphereDirectorException(e);
       }
-    }
+   }
 
-    return result;
-  }
+   @Override
+   public synchronized Collection<VSphereComputeInstance> find(
+         VSphereComputeInstanceTemplate template, Collection<String> instanceIds)
+               throws InterruptedException {
 
-  @Override
-  public synchronized Map<String, InstanceState> getInstanceState(
-      VSphereComputeInstanceTemplate template, Collection<String> instanceIds) {
+      List<VSphereComputeInstance> result = new ArrayList<VSphereComputeInstance>();
+      for (String currentId : instanceIds) {
+         String host = allocations.get(currentId);
+         if (host != null) {
+            try {
+               result.add(new VSphereComputeInstance(template, currentId, InetAddress.getByName(host)));
 
-    Map<String, InstanceState> result = new HashMap<String, InstanceState>();
-    for (String currentId : instanceIds) {
-      if (allocations.containsKey(currentId)) {
-        result.put(currentId, new SimpleInstanceState(InstanceStatus.RUNNING));
-      } else {
-        result.put(currentId, new SimpleInstanceState(InstanceStatus.DELETED));
+            } catch (UnknownHostException e) {
+               throw new RuntimeException(e);
+            }
+         }
       }
-    }
 
-    return result;
-  }
+      return result;
+   }
 
-  @Override
-  public synchronized void delete(VSphereComputeInstanceTemplate template,
-      Collection<String> instanceIds) throws InterruptedException {
+   @Override
+   public synchronized Map<String, InstanceState> getInstanceState(
+         VSphereComputeInstanceTemplate template, Collection<String> instanceIds) {
 
-    for (String currentId : instanceIds) {
-      String host = allocations.remove(currentId);
-      LOG.info(String.format("Deleted allocation: %s -> %s", host, currentId));
-    }
-  }
+      Map<String, InstanceState> result = new HashMap<String, InstanceState>();
+      for (String currentId : instanceIds) {
+         if (allocations.containsKey(currentId)) {
+            result.put(currentId, new SimpleInstanceState(InstanceStatus.RUNNING));
+         } else {
+            result.put(currentId, new SimpleInstanceState(InstanceStatus.DELETED));
+         }
+      }
+
+      return result;
+   }
+
+   @Override
+   public synchronized void delete(VSphereComputeInstanceTemplate template,
+         Collection<String> instanceIds) throws InterruptedException {
+
+      for (String currentId : instanceIds) {
+         String host = allocations.remove(currentId);
+         LOG.info(String.format("Deleted allocation: %s -> %s", host, currentId));
+      }
+   }
 }

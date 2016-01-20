@@ -1,9 +1,9 @@
 /**
  *
  */
-package com.cloudera.director.vsphere.vmware.vm.service.impl;
+package com.cloudera.director.vsphere.vm.service.impl;
 
-import com.cloudera.director.vsphere.vmware.vm.service.intf.IVmNicOperationService;
+import com.cloudera.director.vsphere.vm.service.intf.IVmNicOperationService;
 import com.vmware.vim25.ManagedObjectReference;
 import com.vmware.vim25.VirtualDevice;
 import com.vmware.vim25.VirtualDeviceConfigSpec;

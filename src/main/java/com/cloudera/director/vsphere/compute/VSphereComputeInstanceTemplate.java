@@ -30,10 +30,10 @@ public class VSphereComputeInstanceTemplate extends ComputeInstanceTemplate {
    */
   private final String type;
 
-  private final String numCPUs;
-  private final String memorySize;
+  private final int numCPUs;
+  private final long memorySize;
   private final String diskType;
-  private final String dataDiskSize;
+  private final long dataDiskSize;
   private final String templateVm;
   private final String network;
   private final String haType;
@@ -42,11 +42,11 @@ public String getType() {
    return type;
 }
 
-public String getNumCPUs() {
+public int getNumCPUs() {
    return numCPUs;
 }
 
-public String getMemorySize() {
+public long getMemorySize() {
    return memorySize;
 }
 
@@ -54,7 +54,7 @@ public String getDiskType() {
    return diskType;
 }
 
-public String getDataDiskSize() {
+public long getDataDiskSize() {
    return dataDiskSize;
 }
 
@@ -80,14 +80,14 @@ public static List<ConfigurationProperty> getConfigurationProperties() {
 
     type = getConfigurationValue(VSphereComputeInstanceTemplateConfigurationPropertyToken.TYPE, localizationContext);
 
-    numCPUs = configuration.getConfigurationValue(
-          VSphereComputeInstanceTemplateConfigurationPropertyToken.CPU_NUM,localizationContext);
-    memorySize = configuration.getConfigurationValue(
-          VSphereComputeInstanceTemplateConfigurationPropertyToken.MEM_SIZE_GB,localizationContext);
+    numCPUs = Integer.parseInt(configuration.getConfigurationValue(
+          VSphereComputeInstanceTemplateConfigurationPropertyToken.CPU_NUM,localizationContext));
+    memorySize = Long.parseLong(configuration.getConfigurationValue(
+          VSphereComputeInstanceTemplateConfigurationPropertyToken.MEM_SIZE_GB,localizationContext));
     diskType = configuration.getConfigurationValue(
           VSphereComputeInstanceTemplateConfigurationPropertyToken.DISK_TYPE,localizationContext);
-    dataDiskSize = configuration.getConfigurationValue(
-          VSphereComputeInstanceTemplateConfigurationPropertyToken.STORAGE_SIZE_GB,localizationContext);
+    dataDiskSize = Long.parseLong(configuration.getConfigurationValue(
+          VSphereComputeInstanceTemplateConfigurationPropertyToken.STORAGE_SIZE_GB,localizationContext));
     templateVm = configuration.getConfigurationValue(
           VSphereComputeInstanceTemplateConfigurationPropertyToken.TEMPLATE_VM,localizationContext);
     network = configuration.getConfigurationValue(

@@ -1,7 +1,7 @@
 /**
  *
  */
-package com.cloudera.director.vsphere.vmware.vm.service.intf;
+package com.cloudera.director.vsphere.vm.service.intf;
 
 public interface IVmNicOperationService {
 

@@ -7,7 +7,6 @@
 	<artifactId>vsphere-provider</artifactId>
 	<packaging>jar</packaging>
 	<name>Cloudera Director Vsphere Plugin</name>
-	<url>http://maven.apache.org</url>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -20,11 +19,6 @@
 		<java.target.version>1.6</java.target.version>
 		<slf4j.version>1.7.5</slf4j.version>
 		<typesafe-config.version>1.2.0</typesafe-config.version>
-
-		<vijava.jar>vijava.jar</vijava.jar>
-		<vijava.groupId>com.vmware.vsphere</vijava.groupId>
-		<vijava.artifactId>vijava</vijava.artifactId>
-		<vijava.version>5.5</vijava.version>
 	</properties>
 
 	<dependencies>
@@ -32,12 +26,6 @@
 			<groupId>com.cloudera.director</groupId>
 			<artifactId>director-spi-v1</artifactId>
 			<version>${director-spi-v1.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>${vijava.groupId}</groupId>
-			<artifactId>${vijava.artifactId}</artifactId>
-			<version>${vijava.version}</version>
 		</dependency>
 
 		<dependency>
@@ -54,10 +42,17 @@
 		</dependency>
 
 		<dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.1</version>
-         </dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.cloudbees.thirdparty</groupId>
+			<artifactId>vijava</artifactId>
+			<version>5.5-beta</version>
+		</dependency>
+
 	</dependencies>
 
 	<repositories>
