@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.cloudera.director</groupId>
+  <artifactId>vsphere-provider</artifactId>
+  <name>Cloudera Director Vsphere Plugin</name>
+  <version>1.0.0</version>
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.3</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <finalName>${artifactId}-${version}</finalName>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  <repositories>
+    <repository>
+      <id>cloudera.repo</id>
+      <name>Cloudera Repository</name>
+      <url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
+    </repository>
+  </repositories>
+  <dependencies>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.7.5</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+  <properties>
+    <launcher-class>com.cloudera.director.vsphere.VsphereLauncher</launcher-class>
+    <slf4j.version>1.7.5</slf4j.version>
+    <maven-compiler-plugin.version>3.3</maven-compiler-plugin.version>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.source.version>1.6</java.source.version>
+    <java.target.version>1.6</java.target.version>
+    <typesafe-config.version>1.2.0</typesafe-config.version>
+    <director-spi-v1.version>1.0.0</director-spi-v1.version>
+  </properties>
+</project>
+
