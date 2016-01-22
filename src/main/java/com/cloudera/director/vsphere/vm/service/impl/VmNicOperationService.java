@@ -4,16 +4,7 @@
 package com.cloudera.director.vsphere.vm.service.impl;
 
 import com.cloudera.director.vsphere.vm.service.intf.IVmNicOperationService;
-import com.vmware.vim25.ManagedObjectReference;
-import com.vmware.vim25.VirtualDevice;
-import com.vmware.vim25.VirtualDeviceConfigSpec;
-import com.vmware.vim25.VirtualDeviceConfigSpecOperation;
-import com.vmware.vim25.VirtualEthernetCard;
-import com.vmware.vim25.VirtualEthernetCardNetworkBackingInfo;
-import com.vmware.vim25.VirtualMachineConfigInfo;
-import com.vmware.vim25.VirtualMachineConfigSpec;
-import com.vmware.vim25.VirtualMachineRuntimeInfo;
-import com.vmware.vim25.VirtualPCNet32;
+import com.vmware.vim25.*;
 import com.vmware.vim25.mo.HostSystem;
 import com.vmware.vim25.mo.Network;
 import com.vmware.vim25.mo.Task;
@@ -25,11 +16,13 @@ public class VmNicOperationService implements IVmNicOperationService{
    private final VirtualMachine vm;
    private final String operation;
    private final String netName;
+   private final String newNetname;
 
-   public VmNicOperationService(VirtualMachine vm, String operation, String netName) {
+   public VmNicOperationService(VirtualMachine vm, String operation, String netName, String newNetname) {
       this.vm = vm;
       this.operation = operation;
       this.netName = netName;
+      this.newNetname = newNetname;
    }
 
    @Override
@@ -59,7 +52,7 @@ public class VmNicOperationService implements IVmNicOperationService{
 
       if("add".equalsIgnoreCase(this.operation) && doesNetworkNameExist()) {
          nicSpec.setOperation(VirtualDeviceConfigSpecOperation.add);
-         VirtualEthernetCard nic =  new VirtualPCNet32();
+         VirtualEthernetCard nic =  new VirtualVmxnet3();
          VirtualEthernetCardNetworkBackingInfo nicBacking = new VirtualEthernetCardNetworkBackingInfo();
          nicBacking.setDeviceName(this.netName);
          nic.setAddressType("generated");
@@ -68,14 +61,37 @@ public class VmNicOperationService implements IVmNicOperationService{
          nicSpec.setDevice(nic);
          return nicSpec;
       } else if("remove".equalsIgnoreCase(this.operation)) {
-         VirtualDevice [] vds = vmConfigInfo.getHardware().getDevice();
+         VirtualDevice[] vds = vmConfigInfo.getHardware().getDevice();
          nicSpec.setOperation(VirtualDeviceConfigSpecOperation.remove);
-         for(int i=0; i<vds.length; i++) {
-            if((vds[i] instanceof VirtualEthernetCard) && (vds[i].getDeviceInfo().getLabel().equalsIgnoreCase(this.netName))) {
+         for (int i = 0; i < vds.length; i++) {
+            if ((vds[i] instanceof VirtualEthernetCard) && (vds[i].getDeviceInfo().getLabel().equalsIgnoreCase(this.netName))) {
                nicSpec.setDevice(vds[i]);
                return nicSpec;
             }
          }
+      }else if("edit".equalsIgnoreCase(this.operation)){
+            VirtualDevice [] vds = vmConfigInfo.getHardware().getDevice();
+            nicSpec.setOperation(VirtualDeviceConfigSpecOperation.edit);
+            for(int i=0; i<vds.length; i++) {
+               if ((vds[i].getDeviceInfo().getSummary().equalsIgnoreCase(this.netName))) {
+                  VirtualDeviceConnectInfo connectInfo = new VirtualDeviceConnectInfo();
+                  connectInfo.setConnected(true);
+                  connectInfo.setStartConnected(true);
+
+                  VirtualEthernetCardNetworkBackingInfo nicBacking = (VirtualEthernetCardNetworkBackingInfo)vds[i].getBacking();
+                  nicBacking.setDeviceName(this.newNetname);
+
+                  Description tmp = vds[i].getDeviceInfo();
+                  tmp.setSummary(this.newNetname);
+
+                  vds[i].setBacking(nicBacking);
+                  vds[i].setConnectable(connectInfo);
+                  vds[i].setDeviceInfo(tmp);
+
+                  nicSpec.setDevice(vds[i]);
+                  return nicSpec;
+               }
+            }
       }
       return null;
    }

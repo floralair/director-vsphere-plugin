@@ -3,6 +3,7 @@
  */
 package com.cloudera.director.vsphere.service.impl;
 
+import java.rmi.RemoteException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,6 +18,7 @@ import com.cloudera.director.vsphere.vm.service.impl.VmService;
 import com.vmware.vim25.VirtualDiskMode;
 import com.vmware.vim25.mo.Folder;
 import com.vmware.vim25.mo.ServiceInstance;
+import com.vmware.vim25.mo.VirtualMachine;
 
 /**
  * @author chiq
@@ -139,6 +141,21 @@ public class GroupProvisionService implements IGroupProvisionService {
       for (Node node : group.getNodes()) {
          // TODO add swap disk
          vmService.addDataDisk(node.getVmName(), node.getTargetDatastoreName(), node.getDataDiskSizeGB(), VirtualDiskMode.independent_persistent.toString());
+         //TODO: need to check portgroup type, distributed portgroup or standard portgroup
+         try {
+            VirtualMachine vm = vmService.getVirtualMachine(node.getVmName());
+            if(vm.getNetworks().length==0){
+               vmService.nicOps(node.getVmName(), "add", node.getNetwork(), null);
+            }
+            else{
+               vmService.nicOps(vm.getName(), "edit", vm.getNetworks()[0].getName(), node.getNetwork());
+            }
+         } catch (RemoteException e) {
+            e.printStackTrace();
+         } catch (Exception e) {
+            e.printStackTrace();
+         }
+
       }
    }
 

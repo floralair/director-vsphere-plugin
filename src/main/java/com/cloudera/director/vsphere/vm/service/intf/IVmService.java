@@ -62,7 +62,7 @@ public interface IVmService {
     * @param operation
     * @param netName
     */
-   void nicOps(String vmName, String operation, String netName) throws Exception;
+   void nicOps(String vmName, String operation, String netName, String newNetwork) throws Exception;
 
    /**
     * @param vmName

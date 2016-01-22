@@ -86,10 +86,10 @@ public class VmService implements IVmService {
    }
 
    @Override
-   public void nicOps(String vmName, String operation, String netName) throws Exception {
+   public void nicOps(String vmName, String operation, String netName, String newNetwork) throws Exception {
       VirtualMachine vm = getVirtualMachine(vmName);
 
-      VmNicOperationService vmNicOperationService = new VmNicOperationService(vm, operation, netName);
+      VmNicOperationService vmNicOperationService = new VmNicOperationService(vm, operation, netName, newNetwork);
       vmNicOperationService.run();
    }
 

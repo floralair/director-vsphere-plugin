@@ -25,6 +25,7 @@ public class Node {
    private ManagedObjectReference targetHost;
    private String targetPoolName;
    private ManagedObjectReference targetPool;
+   private String network;
 
    /**
     * @param instanceId
@@ -39,6 +40,7 @@ public class Node {
       this.memorySizeGB = template.getMemorySize();
       this.swapDiskSizeGB = template.getMemorySize();
       this.dataDiskSizeGB = template.getDataDiskSize();
+      this.network = template.getNetwork();
    }
 
    /**
@@ -221,5 +223,13 @@ public class Node {
     */
    public void setTargetPool(ManagedObjectReference targetPool) {
       this.targetPool = targetPool;
+   }
+
+   public String getNetwork() {
+      return network;
+   }
+
+   public void setNetwork(String network) {
+      this.network = network;
    }
 }
