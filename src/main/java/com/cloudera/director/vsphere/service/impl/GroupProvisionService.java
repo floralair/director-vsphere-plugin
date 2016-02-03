@@ -3,7 +3,6 @@
  */
 package com.cloudera.director.vsphere.service.impl;
 
-import java.rmi.RemoteException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,7 +14,6 @@ import com.cloudera.director.vsphere.compute.apitypes.Node;
 import com.cloudera.director.vsphere.service.intf.IGroupProvisionService;
 import com.cloudera.director.vsphere.service.intf.IPlacementPlanner;
 import com.cloudera.director.vsphere.vm.service.impl.VmService;
-import com.vmware.vim25.VirtualDiskMode;
 import com.vmware.vim25.mo.Folder;
 import com.vmware.vim25.mo.ServiceInstance;
 import com.vmware.vim25.mo.VirtualMachine;
@@ -31,10 +29,14 @@ public class GroupProvisionService implements IGroupProvisionService {
    private VmService vmService;
    private Map<String, String> allocations;
 
-   public GroupProvisionService(VSphereCredentials credentials, VSphereComputeInstanceTemplate template, String prefix, Collection<String> instanceIds, int minCount) {
+   public GroupProvisionService() {
+
+   }
+
+   public GroupProvisionService(VSphereCredentials credentials, VSphereComputeInstanceTemplate template, String prefix, Collection<String> instanceIds, int minCount) throws Exception {
       ServiceInstance serviceInstance = credentials.getServiceInstance();
       this.rootFolder = serviceInstance.getRootFolder();
-      this.group = new Group(instanceIds, template, prefix, minCount, new VmService(credentials).getTemplateStorageUsage(template.getTemplateVm()));
+      this.group = new Group(instanceIds, template, prefix, minCount, new VmService(credentials).getVirtualMachine(template.getTemplateVm()));
       this.vmService = new VmService(credentials);
       this.allocations = new HashMap<String, String>();
    }
@@ -115,6 +117,8 @@ public class GroupProvisionService implements IGroupProvisionService {
    public void getPlacementPlan() throws Exception {
       IPlacementPlanner placementPlanner = new PlacementPlanner(rootFolder, group);
       placementPlanner.init();
+      placementPlanner.initNodeDisks();
+      placementPlanner.placeDisk();
    }
 
    private void cloneVms() throws Exception {
@@ -124,38 +128,32 @@ public class GroupProvisionService implements IGroupProvisionService {
 
          // Use the first cloning vm in a host to source template vm to improve vms cloning performance.
          Map<String, String> hostTemplateMap = group.getHostTemplateMap();
-         if (hostTemplateMap.get(node.getTargetHostName()) != null) {
-            templateVmName = hostTemplateMap.get(node.getTargetHostName());
+         String targetHostName = node.getTargetHost().getName();
+         if (hostTemplateMap.get(targetHostName) != null) {
+            templateVmName = hostTemplateMap.get(targetHostName);
          }
 
-         boolean isCloned = vmService.clone(templateVmName, node.getVmName(), node.getNumCPUs(), node.getMemorySizeGB(), node.getTargetDatastore(), node.getTargetHost(), node.getTargetPool());
+         boolean isCloned = vmService.clone(templateVmName, node.getVmName(), node.getNumCPUs(), node.getMemorySizeGB(), node.getTargetDatastore().getMor(), node.getTargetHost().getMor(), node.getTargetPool().getMor());
 
-         if (isCloned && hostTemplateMap.get(node.getTargetHostName()) == null) {
-            hostTemplateMap.put(node.getTargetHostName(), node.getVmName());
+         if (isCloned && hostTemplateMap.get(targetHostName) == null) {
+            hostTemplateMap.put(targetHostName, node.getVmName());
             group.setHostTemplateMap(hostTemplateMap);
          }
       }
    }
 
-   private void reconfigVms() {
+   private void reconfigVms() throws Exception {
       for (Node node : group.getNodes()) {
-         // TODO add swap disk
-         vmService.addDataDisk(node.getVmName(), node.getTargetDatastoreName(), node.getDataDiskSizeGB(), VirtualDiskMode.independent_persistent.toString());
-         //TODO: need to check portgroup type, distributed portgroup or standard portgroup
-         try {
-            VirtualMachine vm = vmService.getVirtualMachine(node.getVmName());
-            if(vm.getNetworks().length==0){
-               vmService.nicOps(node.getVmName(), "add", node.getNetwork(), null);
-            }
-            else{
-               vmService.nicOps(vm.getName(), "edit", vm.getNetworks()[0].getName(), node.getNetwork());
-            }
-         } catch (RemoteException e) {
-            e.printStackTrace();
-         } catch (Exception e) {
-            e.printStackTrace();
-         }
+         vmService.configureVm(node);
 
+         //TODO: need to check portgroup type, distributed portgroup or standard portgroup
+         VirtualMachine vm = vmService.getVirtualMachine(node.getVmName());
+         if(vm.getNetworks().length==0){
+            vmService.nicOps(node.getVmName(), "add", node.getNetwork(), null);
+         }
+         else{
+            vmService.nicOps(vm.getName(), "edit", vm.getNetworks()[0].getName(), node.getNetwork());
+         }
       }
    }
 

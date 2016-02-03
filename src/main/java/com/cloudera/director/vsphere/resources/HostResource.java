@@ -89,4 +89,13 @@ public class HostResource {
       this.networks = networks;
    }
 
+   public DatastoreResource getDatastore(String name) {
+      for (DatastoreResource datastore : this.datastores) {
+         if (name.equals(datastore.getName())) {
+            return datastore;
+         }
+      }
+      return null;
+   }
+
 }

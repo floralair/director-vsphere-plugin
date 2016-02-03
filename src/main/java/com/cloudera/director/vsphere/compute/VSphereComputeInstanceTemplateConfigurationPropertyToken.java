@@ -17,7 +17,7 @@ public enum VSphereComputeInstanceTemplateConfigurationPropertyToken
           .name("CPU number")
           .defaultDescription(
                   "The CPU Number")
-          .defaultValue("2")
+          .defaultValue("4")
           .required(true)
           .build()),
 
@@ -25,7 +25,7 @@ public enum VSphereComputeInstanceTemplateConfigurationPropertyToken
           .configKey("memorySizeGB")
           .name("Memory (GB)")
           .defaultDescription("The memory size (in GB)")
-          .defaultValue("2")
+          .defaultValue("8")
           .required(true)
           .widget(ConfigurationProperty.Widget.NUMBER)
           .type(Property.Type.INTEGER)
@@ -42,7 +42,7 @@ public enum VSphereComputeInstanceTemplateConfigurationPropertyToken
           .defaultValue("Custom")
           .build()),
 
-  DISK_TYPE(new SimpleConfigurationPropertyBuilder()
+  STORAGE_TYPE(new SimpleConfigurationPropertyBuilder()
           .configKey("storageType")
           .name("Storage type")
           .required(true)

@@ -4,7 +4,6 @@
 package com.cloudera.director.vsphere.vm.service.impl;
 
 import com.cloudera.director.vsphere.vm.service.intf.IVmDiskOperationService;
-import com.vmware.vim25.DatastoreSummary;
 import com.vmware.vim25.VirtualDevice;
 import com.vmware.vim25.VirtualDeviceConfigSpec;
 import com.vmware.vim25.VirtualDeviceConfigSpecFileOperation;
@@ -13,7 +12,6 @@ import com.vmware.vim25.VirtualDisk;
 import com.vmware.vim25.VirtualDiskFlatVer2BackingInfo;
 import com.vmware.vim25.VirtualMachineConfigInfo;
 import com.vmware.vim25.VirtualMachineConfigSpec;
-import com.vmware.vim25.mo.Datastore;
 import com.vmware.vim25.mo.Task;
 import com.vmware.vim25.mo.VirtualMachine;
 
@@ -26,38 +24,26 @@ public class VmDiskOperationService implements IVmDiskOperationService {
    }
 
    @Override
-   public void addSwapDisk(String targetDatastoreName, long diskSize, String diskMode) {
+   public void addSwapDisk(String targetDatastoreName, long diskSize, String diskMode) throws Exception {
       VirtualMachineConfigSpec vmConfigSpec = new VirtualMachineConfigSpec();
-      VirtualDeviceConfigSpec vdiskSpec;
-      try {
-         vdiskSpec = createAddDiskConfigSpec(vm, diskSize, diskMode);
-         VirtualDeviceConfigSpec [] vdiskSpecArray = {vdiskSpec};
-         vmConfigSpec.setDeviceChange(vdiskSpecArray);
-         Task task = vm.reconfigVM_Task(vmConfigSpec);
-         task.waitForMe();
-      } catch (Exception e) {
-         // TODO Auto-generated catch block
-         e.printStackTrace();
-      }
+      VirtualDeviceConfigSpec vdiskSpec = createAddDiskConfigSpec(vm, targetDatastoreName, diskSize, diskMode);
+      VirtualDeviceConfigSpec [] vdiskSpecArray = {vdiskSpec};
+      vmConfigSpec.setDeviceChange(vdiskSpecArray);
+      Task task = vm.reconfigVM_Task(vmConfigSpec);
+      task.waitForMe();
    }
 
    @Override
-   public void addDataDisk(String targetDatastoreName, long diskSize, String diskMode) {
+   public void addDataDisk(String targetDatastoreName, long diskSize, String diskMode) throws Exception {
       VirtualMachineConfigSpec vmConfigSpec = new VirtualMachineConfigSpec();
-      VirtualDeviceConfigSpec vdiskSpec;
-      try {
-         vdiskSpec = createAddDiskConfigSpec(vm, diskSize, diskMode);
-         VirtualDeviceConfigSpec [] vdiskSpecArray = {vdiskSpec};
-         vmConfigSpec.setDeviceChange(vdiskSpecArray);
-         Task task = vm.reconfigVM_Task(vmConfigSpec);
-         task.waitForMe();
-      } catch (Exception e) {
-         // TODO Auto-generated catch block
-         e.printStackTrace();
-      }
+      VirtualDeviceConfigSpec vdiskSpec = createAddDiskConfigSpec(vm, targetDatastoreName, diskSize, diskMode);
+      VirtualDeviceConfigSpec [] vdiskSpecArray = {vdiskSpec};
+      vmConfigSpec.setDeviceChange(vdiskSpecArray);
+      Task task = vm.reconfigVM_Task(vmConfigSpec);
+      task.waitForMe();
    }
 
-   private VirtualDeviceConfigSpec createAddDiskConfigSpec(VirtualMachine vm, long diskSize, String diskMode) throws Exception
+   private VirtualDeviceConfigSpec createAddDiskConfigSpec(VirtualMachine vm, String targetDatastoreName, long diskSize, String diskMode) throws Exception
    {
       VirtualDeviceConfigSpec diskSpec = new VirtualDeviceConfigSpec();
       VirtualMachineConfigInfo vmConfig = vm.getConfig();
@@ -77,7 +63,7 @@ public class VmDiskOperationService implements IVmDiskOperationService {
       }
 
       unitNumber = vds.length + 1; //***********************seems NOT correct!!!
-      String dsName = getFreeDatastoreName(vm, diskSize);
+      String dsName = targetDatastoreName;
       if(dsName==null)
       {
          return null;
@@ -99,33 +85,15 @@ public class VmDiskOperationService implements IVmDiskOperationService {
       return diskSpec;
    }
 
-   private String getFreeDatastoreName(VirtualMachine vm, long size) throws Exception {
-      String dsName = null;
-      Datastore[] datastores = vm.getDatastores();
-      for(int i=0; i<datastores.length; i++) {
-         DatastoreSummary ds = datastores[i].getSummary();
-         if(ds.getFreeSpace() > size) {
-            dsName = ds.getName();
-            break;
-         }
-      }
-      return dsName;
-   }
-
    @Override
-   public void removeDisk(String diskName) {
+   public void removeDisk(String diskName) throws Exception {
       VirtualMachineConfigSpec vmConfigSpec = new VirtualMachineConfigSpec();
       VirtualDeviceConfigSpec vdiskSpec;
-      try {
-         vdiskSpec = createRemoveDiskConfigSpec(diskName);
-         VirtualDeviceConfigSpec [] vdiskSpecArray = {vdiskSpec};
-         vmConfigSpec.setDeviceChange(vdiskSpecArray);
-         Task task = vm.reconfigVM_Task(vmConfigSpec);
-         task.waitForMe();
-      } catch (Exception e) {
-         // TODO Auto-generated catch block
-         e.printStackTrace();
-      }
+      vdiskSpec = createRemoveDiskConfigSpec(diskName);
+      VirtualDeviceConfigSpec [] vdiskSpecArray = {vdiskSpec};
+      vmConfigSpec.setDeviceChange(vdiskSpecArray);
+      Task task = vm.reconfigVM_Task(vmConfigSpec);
+      task.waitForMe();
    }
 
    private VirtualDeviceConfigSpec createRemoveDiskConfigSpec(String diskName) throws Exception {

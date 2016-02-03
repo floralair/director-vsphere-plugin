@@ -32,7 +32,7 @@ public class VSphereComputeInstanceTemplate extends ComputeInstanceTemplate {
 
   private final int numCPUs;
   private final long memorySize;
-  private final String diskType;
+  private final String storageType;
   private final long dataDiskSize;
   private final String templateVm;
   private final String network;
@@ -50,8 +50,8 @@ public long getMemorySize() {
    return memorySize;
 }
 
-public String getDiskType() {
-   return diskType;
+public String getStorageType() {
+   return storageType;
 }
 
 public long getDataDiskSize() {
@@ -84,8 +84,8 @@ public static List<ConfigurationProperty> getConfigurationProperties() {
           VSphereComputeInstanceTemplateConfigurationPropertyToken.CPU_NUM,localizationContext));
     memorySize = Long.parseLong(configuration.getConfigurationValue(
           VSphereComputeInstanceTemplateConfigurationPropertyToken.MEM_SIZE_GB,localizationContext));
-    diskType = configuration.getConfigurationValue(
-          VSphereComputeInstanceTemplateConfigurationPropertyToken.DISK_TYPE,localizationContext);
+    storageType = configuration.getConfigurationValue(
+          VSphereComputeInstanceTemplateConfigurationPropertyToken.STORAGE_TYPE,localizationContext);
     dataDiskSize = Long.parseLong(configuration.getConfigurationValue(
           VSphereComputeInstanceTemplateConfigurationPropertyToken.STORAGE_SIZE_GB,localizationContext));
     templateVm = configuration.getConfigurationValue(

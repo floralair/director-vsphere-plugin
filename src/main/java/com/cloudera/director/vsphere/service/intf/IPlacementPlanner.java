@@ -14,4 +14,14 @@ public interface IPlacementPlanner {
     */
    void init() throws Exception;
 
+   /**
+    * @throws Exception
+    */
+   void initNodeDisks() throws Exception;
+
+   /**
+    *
+    */
+   void placeDisk();
+
 }

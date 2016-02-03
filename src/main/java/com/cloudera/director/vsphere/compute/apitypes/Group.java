@@ -11,25 +11,31 @@ import java.util.List;
 import java.util.Map;
 
 import com.cloudera.director.vsphere.compute.VSphereComputeInstanceTemplate;
+import com.cloudera.director.vsphere.utils.VmConfigUtil;
+import com.vmware.vim25.VirtualDevice;
+import com.vmware.vim25.VirtualDisk;
+import com.vmware.vim25.mo.VirtualMachine;
 
 public class Group {
 
    private String name;
    private int minCount;
    private String networkName;
-   private long templateStorageUsage;
+   private Node templateNode;
    private List<Node> nodes = new ArrayList<Node>();
    private Map<String, String> hostTemplateMap;
 
-   public Group(Collection<String> instanceIds, VSphereComputeInstanceTemplate template, String prefix, int minCount, long templateStorageUsage) {
+   public Group() {}
+
+   public Group(Collection<String> instanceIds, VSphereComputeInstanceTemplate template, String prefix, int minCount, VirtualMachine templateVm) {
       this.name = "group-" + (int) (new Date().getTime()/1000);
       this.minCount = minCount;
+      this.templateNode = createNodeFromTemplateVm(templateVm);
       this.networkName = template.getNetwork();
-      this.templateStorageUsage = templateStorageUsage;
       this.hostTemplateMap = new HashMap<String, String> ();
 
       for (String instanceId : instanceIds) {
-         Node node = new Node(instanceId, template, prefix);
+         Node node = new Node(instanceId, template, prefix, networkName);
          this.nodes.add(node);
       }
    }
@@ -77,20 +83,6 @@ public class Group {
    }
 
    /**
-    * @return the templateStorageUsage
-    */
-   public long getTemplateStorageUsage() {
-      return templateStorageUsage;
-   }
-
-   /**
-    * @param templateStorageUsage the templateStorageUsage to set
-    */
-   public void setTemplateStorageUsage(long templateStorageUsage) {
-      this.templateStorageUsage = templateStorageUsage;
-   }
-
-   /**
     * @return the nodes
     */
    public List<Node> getNodes() {
@@ -117,4 +109,37 @@ public class Group {
    public void setHostTemplateMap(Map<String, String> hostTemplateMap) {
       this.hostTemplateMap = hostTemplateMap;
    }
+
+   /**
+    * @return the templateNode
+    */
+   public Node getTemplateNode() {
+      return templateNode;
+   }
+
+   /**
+    * @param templateNode the templateNode to set
+    */
+   public void setTemplateNode(Node templateNode) {
+      this.templateNode = templateNode;
+   }
+
+   public Node createNodeFromTemplateVm(final VirtualMachine templateVm) {
+      Node templateNode = new Node(templateVm.getName());
+      List<DiskSpec> diskSpecs = new ArrayList<DiskSpec>();
+      VirtualDevice[] devices = VmConfigUtil.getDevice(templateVm);
+      List<DeviceId> deviceIds = VmConfigUtil.getVirtualDiskIds(devices);
+      for (DeviceId slot : deviceIds) {
+         VirtualDisk vmdk = (VirtualDisk) VmConfigUtil.getVirtualDevice(devices, slot);
+         DiskSpec spec = new DiskSpec();
+         spec.setName(DiskType.SYSTEM_DISK.getDiskName());
+         spec.setSize(vmdk.getCapacityInKB() / (1024 * 1024));
+         spec.setDiskType(DiskType.SYSTEM_DISK);
+         spec.setController(DiskScsiControllerType.LSI_CONTROLLER);
+         diskSpecs.add(spec);
+      }
+      templateNode.setDisks(diskSpecs);
+      return templateNode;
+   }
+
 }

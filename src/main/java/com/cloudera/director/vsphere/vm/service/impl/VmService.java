@@ -3,16 +3,15 @@
  */
 package com.cloudera.director.vsphere.vm.service.impl;
 
-import java.rmi.RemoteException;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.cloudera.director.vsphere.VSphereCredentials;
+import com.cloudera.director.vsphere.compute.apitypes.Node;
 import com.cloudera.director.vsphere.vm.service.intf.IVmService;
-import com.vmware.vim25.InvalidProperty;
 import com.vmware.vim25.ManagedObjectReference;
-import com.vmware.vim25.RuntimeFault;
 import com.vmware.vim25.VirtualDevice;
 import com.vmware.vim25.VirtualDisk;
 import com.vmware.vim25.VirtualHardware;
@@ -30,6 +29,20 @@ public class VmService implements IVmService {
    public VmService (VSphereCredentials credentials){
       this.serviceInstance = credentials.getServiceInstance();
       this.rootFolder = this.serviceInstance.getRootFolder();
+   }
+
+   /**
+    * @return the serviceInstance
+    */
+   public ServiceInstance getServiceInstance() {
+      return serviceInstance;
+   }
+
+   /**
+    * @return the rootFolder
+    */
+   public Folder getRootFolder() {
+      return rootFolder;
    }
 
    @Override
@@ -69,7 +82,7 @@ public class VmService implements IVmService {
    }
 
    @Override
-   public void addDataDisk(String vmName, String targetDatastoreName, long diskSize, String diskMode) {
+   public void addDataDisk(String vmName, String targetDatastoreName, long diskSize, String diskMode) throws Exception {
       VirtualMachine vm = getVirtualMachine(vmName);
 
       VmDiskOperationService vmDiskOperationService = new VmDiskOperationService(vm);
@@ -78,11 +91,23 @@ public class VmService implements IVmService {
    }
 
    @Override
-   public void addSwapDisk(String vmName, String targetDatastoreName, long diskSize, String diskMode) {
+   public void addSwapDisk(String vmName, String targetDatastoreName, long diskSize, String diskMode) throws Exception {
       VirtualMachine vm = getVirtualMachine(vmName);
 
       VmDiskOperationService vmDiskOperationService = new VmDiskOperationService(vm);
       vmDiskOperationService.addSwapDisk(targetDatastoreName, diskSize, diskMode);
+   }
+
+   /**
+    * @param node
+    */
+   @Override
+   public void configureVm(Node node) throws Exception {
+      VirtualMachine vm = getVirtualMachine(node.getVmName());
+
+      VmReconfigService vmReconfigService = new VmReconfigService(vm);
+      vmReconfigService.changeDisks(node);
+
    }
 
    @Override
@@ -94,7 +119,7 @@ public class VmService implements IVmService {
    }
 
    @Override
-   public long getTemplateStorageUsage(String vmName) {
+   public long getTemplateStorageUsage(String vmName) throws Exception {
       long templateStorageUsage = 0;
 
       VirtualMachine vm =  getVirtualMachine(vmName);
@@ -112,20 +137,17 @@ public class VmService implements IVmService {
    }
 
    @Override
-   public VirtualMachine getVirtualMachine(String vmName) {
-      VirtualMachine vm = null;
-      try {
-         vm = (VirtualMachine) new InventoryNavigator(this.rootFolder).searchManagedEntity("VirtualMachine", vmName);
-      } catch (InvalidProperty e) {
-         // TODO Auto-generated catch block
-         e.printStackTrace();
-      } catch (RuntimeFault e) {
-         // TODO Auto-generated catch block
-         e.printStackTrace();
-      } catch (RemoteException e) {
-         // TODO Auto-generated catch block
-         e.printStackTrace();
-      }
+   public VirtualMachine getVirtualMachine(String vmName) throws Exception {
+      VirtualMachine vm = (VirtualMachine) new InventoryNavigator(this.rootFolder).searchManagedEntity("VirtualMachine", vmName);
       return vm;
    }
+
+   @Override
+   public void setMachineIdVariables(String vmName, Map<String, Object> guestVariables) throws Exception {
+      VirtualMachine vm = getVirtualMachine(vmName);
+
+      VmReconfigService vmReconfigService = new VmReconfigService(vm);
+      vmReconfigService.setMachineIdVariables(guestVariables);
+   }
+
 }

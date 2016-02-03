@@ -3,6 +3,7 @@
  */
 package com.cloudera.director.vsphere.resources;
 
+import com.cloudera.director.vsphere.utils.VsphereDirectorAssert;
 import com.vmware.vim25.ManagedObjectReference;
 
 /**
@@ -49,6 +50,11 @@ public class DatastoreResource {
     */
    public void setMor(ManagedObjectReference mor) {
       this.mor = mor;
+   }
+
+   public void allocate(long sizeGB) {
+      VsphereDirectorAssert.check(this.freeSpace - sizeGB >= 0);
+      this.freeSpace -= sizeGB;
    }
 
 }
