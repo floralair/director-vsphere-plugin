@@ -6,6 +6,7 @@ package com.cloudera.director.vsphere.vm.service.intf;
 import java.util.Map;
 
 import com.cloudera.director.vsphere.compute.apitypes.Node;
+import com.cloudera.director.vsphere.resources.VcNetwork;
 import com.vmware.vim25.ManagedObjectReference;
 import com.vmware.vim25.mo.VirtualMachine;
 
@@ -68,7 +69,7 @@ public interface IVmService {
     * @param operation
     * @param netName
     */
-   void nicOps(String vmName, String operation, String netName, String newNetwork) throws Exception;
+   void nicOps(String vmName, String operation, VcNetwork vcNet, String netName, String newNetwork) throws Exception;
 
    /**
     * @param vmName
@@ -76,6 +77,12 @@ public interface IVmService {
     * @throws Exception
     */
    long getTemplateStorageUsage(String vmName) throws Exception;
+
+   /**
+    * @param node
+    */
+
+   public void configNetworks(Node node) throws Exception;
 
    /**
     * @param vmName

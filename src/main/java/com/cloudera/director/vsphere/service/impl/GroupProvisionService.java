@@ -145,15 +145,6 @@ public class GroupProvisionService implements IGroupProvisionService {
    private void reconfigVms() throws Exception {
       for (Node node : group.getNodes()) {
          vmService.configureVm(node);
-
-         //TODO: need to check portgroup type, distributed portgroup or standard portgroup
-         VirtualMachine vm = vmService.getVirtualMachine(node.getVmName());
-         if(vm.getNetworks().length==0){
-            vmService.nicOps(node.getVmName(), "add", node.getNetwork(), null);
-         }
-         else{
-            vmService.nicOps(vm.getName(), "edit", vm.getNetworks()[0].getName(), node.getNetwork());
-         }
       }
    }
 

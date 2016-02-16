@@ -3,6 +3,7 @@
  */
 package com.cloudera.director.vsphere.vm.service.impl;
 
+import com.cloudera.director.vsphere.resources.VcNetwork;
 import com.cloudera.director.vsphere.vm.service.intf.IVmNicOperationService;
 import com.vmware.vim25.*;
 import com.vmware.vim25.mo.HostSystem;
@@ -17,12 +18,14 @@ public class VmNicOperationService implements IVmNicOperationService{
    private final String operation;
    private final String netName;
    private final String newNetname;
+   private final VcNetwork vcNetwork;
 
-   public VmNicOperationService(VirtualMachine vm, String operation, String netName, String newNetname) {
+   public VmNicOperationService(VirtualMachine vm, String operation, VcNetwork vcNet, String netName, String newNetname) {
       this.vm = vm;
       this.operation = operation;
       this.netName = netName;
       this.newNetname = newNetname;
+      this.vcNetwork = vcNet;
    }
 
    @Override
@@ -53,47 +56,66 @@ public class VmNicOperationService implements IVmNicOperationService{
       if("add".equalsIgnoreCase(this.operation) && doesNetworkNameExist()) {
          nicSpec.setOperation(VirtualDeviceConfigSpecOperation.add);
          VirtualEthernetCard nic =  new VirtualVmxnet3();
-         VirtualEthernetCardNetworkBackingInfo nicBacking = new VirtualEthernetCardNetworkBackingInfo();
-         nicBacking.setDeviceName(this.netName);
+         VirtualDeviceBackingInfo nicBacking;
+
+         VirtualDeviceConnectInfo connectInfo = new VirtualDeviceConnectInfo();
+         connectInfo.setConnected(true);
+         connectInfo.setStartConnected(true);
+
+         if(vcNetwork.isDvPortGroup())
+            nicBacking = (VirtualEthernetCardDistributedVirtualPortBackingInfo)vcNetwork.getBackingInfo();
+         else
+            nicBacking = new VirtualEthernetCardNetworkBackingInfo();
+
+         Description tmp = new Description();
+         tmp.setSummary(this.newNetname);
+         tmp.setLabel(this.newNetname);
+
          nic.setAddressType("generated");
          nic.setBacking(nicBacking);
          nic.setKey(4);
+         nic.setConnectable(connectInfo);
+         nic.setDeviceInfo(tmp);
          nicSpec.setDevice(nic);
          return nicSpec;
       } else if("remove".equalsIgnoreCase(this.operation)) {
          VirtualDevice[] vds = vmConfigInfo.getHardware().getDevice();
          nicSpec.setOperation(VirtualDeviceConfigSpecOperation.remove);
          for (int i = 0; i < vds.length; i++) {
-            if ((vds[i] instanceof VirtualEthernetCard) && (vds[i].getDeviceInfo().getLabel().equalsIgnoreCase(this.netName))) {
+            if ((vds[i] instanceof VirtualEthernetCard) && (vds[i].getKey() == 4000)) {
                nicSpec.setDevice(vds[i]);
                return nicSpec;
             }
          }
       }else if("edit".equalsIgnoreCase(this.operation)){
-            VirtualDevice [] vds = vmConfigInfo.getHardware().getDevice();
-            nicSpec.setOperation(VirtualDeviceConfigSpecOperation.edit);
-            for(int i=0; i<vds.length; i++) {
-               if ((vds[i].getDeviceInfo().getSummary().equalsIgnoreCase(this.netName))) {
-                  VirtualDeviceConnectInfo connectInfo = new VirtualDeviceConnectInfo();
-                  connectInfo.setConnected(true);
-                  connectInfo.setStartConnected(true);
+         VirtualDevice [] vds = vmConfigInfo.getHardware().getDevice();
+         nicSpec.setOperation(VirtualDeviceConfigSpecOperation.edit);
+         VirtualDeviceBackingInfo nicBacking;
+         for(int i=0; i<vds.length; i++) {
+            //if ((vds[i].getDeviceInfo().getLabel().equalsIgnoreCase(this.netName))) {
+            if((vds[i].getKey() == 4000)){
+               VirtualDeviceConnectInfo connectInfo = new VirtualDeviceConnectInfo();
+               connectInfo.setConnected(true);
+               connectInfo.setStartConnected(true);
 
-                  VirtualEthernetCardNetworkBackingInfo nicBacking = (VirtualEthernetCardNetworkBackingInfo)vds[i].getBacking();
-                  nicBacking.setDeviceName(this.newNetname);
+               if(vcNetwork.isDvPortGroup())
+                  nicBacking = (VirtualEthernetCardDistributedVirtualPortBackingInfo)vcNetwork.getBackingInfo();
+               else
+                  nicBacking = (VirtualEthernetCardNetworkBackingInfo)vds[i].getBacking();
 
-                  Description tmp = vds[i].getDeviceInfo();
-                  tmp.setSummary(this.newNetname);
+               Description tmp = vds[i].getDeviceInfo();
+               tmp.setSummary(this.newNetname);
 
-                  vds[i].setBacking(nicBacking);
-                  vds[i].setConnectable(connectInfo);
-                  vds[i].setDeviceInfo(tmp);
+               vds[i].setBacking(nicBacking);
+               vds[i].setConnectable(connectInfo);
+               vds[i].setDeviceInfo(tmp);
 
-                  nicSpec.setDevice(vds[i]);
-                  return nicSpec;
-               }
+               nicSpec.setDevice(vds[i]);
+               return nicSpec;
             }
+         }
       }
-      return null;
+      return nicSpec;
    }
 
    private boolean doesNetworkNameExist() throws Exception {

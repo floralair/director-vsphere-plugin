@@ -5,6 +5,8 @@ package com.cloudera.director.vsphere.vm.service.impl;
 
 import java.util.Map;
 
+import com.cloudera.director.vsphere.resources.VcNetwork;
+import com.vmware.vim25.mo.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,10 +17,6 @@ import com.vmware.vim25.ManagedObjectReference;
 import com.vmware.vim25.VirtualDevice;
 import com.vmware.vim25.VirtualDisk;
 import com.vmware.vim25.VirtualHardware;
-import com.vmware.vim25.mo.Folder;
-import com.vmware.vim25.mo.InventoryNavigator;
-import com.vmware.vim25.mo.ServiceInstance;
-import com.vmware.vim25.mo.VirtualMachine;
 
 public class VmService implements IVmService {
    private static final Logger logger = LoggerFactory.getLogger(VmService.class);
@@ -108,13 +106,50 @@ public class VmService implements IVmService {
       VmReconfigService vmReconfigService = new VmReconfigService(vm);
       vmReconfigService.changeDisks(node);
 
+      configNetworks(node);
+   }
+
+   /**
+    * @param node
+    */
+   @Override
+   public void configNetworks(Node node) throws Exception {
+         ManagedObjectReference mob = node.getTargetHost().getMor();
+         HostSystem hostSystem = new HostSystem(rootFolder.getServerConnection(), mob);
+
+         Network[] networks = hostSystem.getNetworks();
+         logger.info("The host  is " + hostSystem.getName());
+         boolean tag = false;
+         for (Network network : networks) {
+            //the setting network for Cloudera director exists in Esx hosts netowrk which the node vm is located in
+            logger.info("The ESX host network is " + network.getName());
+            if (node.getNetwork().equals(network.getName())) {
+               tag = true;
+               VirtualMachine vm = getVirtualMachine(node.getVmName());
+               if(vm.getNetworks().length == 0){
+                  VcNetwork vcNet = new VcNetwork();
+                  vcNet.update(rootFolder.getServerConnection(), network);
+                  nicOps(node.getVmName(), "add", vcNet, node.getNetwork(), null);
+                  break;
+               }else {
+                  //edit existing network
+                  VcNetwork vcNet = new VcNetwork();
+                  vcNet.update(rootFolder.getServerConnection(), network);
+                  nicOps(vm.getName(), "edit", vcNet, vm.getNetworks()[0].getName(), node.getNetwork());
+                  break;
+               }
+            }
+         }
+
+         if(tag == false)
+            throw new Exception("Network " + node.getNetwork() + " is not defined on ESX hosts");
    }
 
    @Override
-   public void nicOps(String vmName, String operation, String netName, String newNetwork) throws Exception {
+   public void nicOps(String vmName, String operation, VcNetwork vcNet, String netName, String newNetwork) throws Exception {
       VirtualMachine vm = getVirtualMachine(vmName);
 
-      VmNicOperationService vmNicOperationService = new VmNicOperationService(vm, operation, netName, newNetwork);
+      VmNicOperationService vmNicOperationService = new VmNicOperationService(vm, operation, vcNet, netName, newNetwork);
       vmNicOperationService.run();
    }
 
