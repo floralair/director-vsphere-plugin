@@ -14,6 +14,7 @@ import com.cloudera.director.vsphere.resources.NetworkResource;
 import com.cloudera.director.vsphere.resources.PoolResource;
 import com.cloudera.director.vsphere.service.intf.IHostResourceManager;
 import com.vmware.vim25.InvalidProperty;
+import com.vmware.vim25.ManagedEntityStatus;
 import com.vmware.vim25.RuntimeFault;
 import com.vmware.vim25.mo.ClusterComputeResource;
 import com.vmware.vim25.mo.Datastore;
@@ -56,6 +57,9 @@ public class HostResourceManager implements IHostResourceManager {
          HostResource hostResource = new HostResource();
          hostResource.setName(hostSystem.getName());
          hostSystem.getMOR();
+         if (ManagedEntityStatus.red.equals(hostSystem.getConfigStatus())) {
+            continue;
+         }
 
          List<NetworkResource> networkResources = new ArrayList<NetworkResource>();
          Network[] networks = hostSystem.getNetworks();
