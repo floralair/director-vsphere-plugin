@@ -34,11 +34,6 @@ public class DiskSchemaUtil {
       return SchemaUtil.getSchema(file, DiskSchema.class);
    }
 
-   /**
-    *
-    * @param template
-    * @param diskMap
-    */
    public static void getTemplateDiskMap(VmSchema vmSchema,
          HashMap<String, Disk.Operation> diskMap) {
       for (DiskSchema.Disk disk : vmSchema.diskSchema.getDisks()) {
@@ -46,23 +41,6 @@ public class DiskSchemaUtil {
       }
    }
 
-   /**
-    * Get the set of disks to add to the newly cloned Vm (from the DiskSchema
-    * information)
-    *
-    * @param hostList
-    *           the list of hosts that have access to the datastores on which
-    *           the disks are to be added
-    * @param rp
-    *           the resource pool in which the VM is
-    * @param datastore
-    *           the default datastore to add the disk to, if not specified in
-    *           diskSchema
-    * @param diskSchema
-    *           the VM's diskSchema
-    * @return ArrayList of CreateSpec for the new disks to add hostList is
-    *         updated
-    */
    public static List<DiskCreateSpec> getDisksToAdd(Node node, HashMap<String, Disk.Operation> diskMap) {
       List<DiskCreateSpec> result = new ArrayList<DiskCreateSpec>();
 

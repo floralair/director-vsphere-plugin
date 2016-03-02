@@ -13,10 +13,10 @@ import com.cloudera.director.vsphere.compute.apitypes.Group;
 import com.cloudera.director.vsphere.compute.apitypes.Node;
 import com.cloudera.director.vsphere.service.intf.IGroupProvisionService;
 import com.cloudera.director.vsphere.service.intf.IPlacementPlanner;
+import com.cloudera.director.vsphere.utils.VmUtil;
 import com.cloudera.director.vsphere.vm.service.impl.VmService;
 import com.vmware.vim25.mo.Folder;
 import com.vmware.vim25.mo.ServiceInstance;
-import com.vmware.vim25.mo.VirtualMachine;
 
 /**
  * @author chiq
@@ -36,7 +36,7 @@ public class GroupProvisionService implements IGroupProvisionService {
    public GroupProvisionService(VSphereCredentials credentials, VSphereComputeInstanceTemplate template, String prefix, Collection<String> instanceIds, int minCount) throws Exception {
       ServiceInstance serviceInstance = credentials.getServiceInstance();
       this.rootFolder = serviceInstance.getRootFolder();
-      this.group = new Group(instanceIds, template, prefix, minCount, new VmService(credentials).getVirtualMachine(template.getTemplateVm()));
+      this.group = new Group(instanceIds, template, prefix, minCount, VmUtil.getVirtualMachine(serviceInstance, template.getTemplateVm()));
       this.vmService = new VmService(credentials);
       this.allocations = new HashMap<String, String>();
    }

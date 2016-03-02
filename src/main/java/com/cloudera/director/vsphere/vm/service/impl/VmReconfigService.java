@@ -13,11 +13,14 @@ import com.cloudera.director.vsphere.compute.apitypes.DiskSchema.Disk;
 import com.cloudera.director.vsphere.compute.apitypes.Node;
 import com.cloudera.director.vsphere.utils.DiskSchemaUtil;
 import com.cloudera.director.vsphere.utils.VmConfigUtil;
+import com.cloudera.director.vsphere.utils.VmUtil;
 import com.cloudera.director.vsphere.vm.service.intf.IVmReconfigService;
 import com.google.gson.Gson;
 import com.vmware.vim25.OptionValue;
 import com.vmware.vim25.VirtualDeviceConfigSpec;
 import com.vmware.vim25.VirtualMachineConfigSpec;
+import com.vmware.vim25.VirtualMachineFlagInfo;
+import com.vmware.vim25.mo.ServiceInstance;
 import com.vmware.vim25.mo.VirtualMachine;
 
 /**
@@ -26,25 +29,24 @@ import com.vmware.vim25.mo.VirtualMachine;
  */
 public class VmReconfigService implements IVmReconfigService {
 
-   private final VirtualMachine vm;
+   private final ServiceInstance serviceInstance;
 
    private final String MACHINE_ID = "machine.id";
+   private  final String GUEST_VARIABLE_VOLUMES = "volumes";
 
-   /**
-    * @param vm
-    */
-   public VmReconfigService(VirtualMachine vm) {
-      this.vm = vm;
+   public VmReconfigService(ServiceInstance serviceInstance) {
+      this.serviceInstance = serviceInstance;
    }
 
    /**
-    * @return the vm
+    * @return the serviceInstance
     */
-   public VirtualMachine getVm() {
-      return vm;
+   public ServiceInstance getServiceInstance() {
+      return serviceInstance;
    }
 
    public void changeDisks(Node node) throws Exception {
+      VirtualMachine vm = VmUtil.getVirtualMachine(serviceInstance, node.getVmName());
       final VirtualMachineConfigSpec configSpec = new VirtualMachineConfigSpec();
       final List<VirtualDeviceConfigSpec> devChanges = new ArrayList<VirtualDeviceConfigSpec>();
 
@@ -62,12 +64,21 @@ public class VmReconfigService implements IVmReconfigService {
    }
 
    @Override
-   public void setMachineIdVariables(Map<String, Object> guestVariables) throws Exception {
-      setExtraConfig(MACHINE_ID, guestVariables);
+   public void setVolumesToMachineId(Node node) throws Exception {
+      VirtualMachine vm = VmUtil.getVirtualMachine(serviceInstance, node.getVmName());
+      String volumes = VmUtil.getVolumes(vm, node.getVmSchema().diskSchema.getDisks());
+      Map<String, Object> volumesVariable = new HashMap<String, Object>();
+      volumesVariable.put(GUEST_VARIABLE_VOLUMES, volumes);
+      setMachineIdVariables(vm, volumesVariable);
    }
 
    @Override
-   public void setExtraConfig(String optionKey, Object value) throws Exception {
+   public void setMachineIdVariables(VirtualMachine vm, Map<String, Object> guestVariables) throws Exception {
+      setExtraConfig(vm, MACHINE_ID, guestVariables);
+   }
+
+   @Override
+   public void setExtraConfig(VirtualMachine vm, String optionKey, Object value) throws Exception {
 
       VirtualMachineConfigSpec vmSpec = new VirtualMachineConfigSpec();
       String jsonString = (new Gson()).toJson(value);
@@ -80,6 +91,17 @@ public class VmReconfigService implements IVmReconfigService {
       vmSpec.setExtraConfig(extraConfig);
 
       vm.reconfigVM_Task(vmSpec);
+   }
+
+   @Override
+   public void enableDiskUUID(Node node) throws Exception {
+      VirtualMachine vm = VmUtil.getVirtualMachine(serviceInstance, node.getVmName());
+
+      VirtualMachineFlagInfo flagInfo = new VirtualMachineFlagInfo();
+      flagInfo.setDiskUuidEnabled(true);
+      VirtualMachineConfigSpec configSpec = new VirtualMachineConfigSpec();
+      configSpec.setFlags(flagInfo);
+      vm.reconfigVM_Task(configSpec);
    }
 
 }

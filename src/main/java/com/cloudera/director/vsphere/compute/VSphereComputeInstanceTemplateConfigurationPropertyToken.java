@@ -48,10 +48,10 @@ public enum VSphereComputeInstanceTemplateConfigurationPropertyToken
           .required(true)
           .widget(ConfigurationProperty.Widget.OPENLIST)
           .defaultDescription(
-                  "Select Storage type as \"SHARE\" or \"LOCAL\""
+                  "Select Storage type as \"SHARED\" or \"LOCAL\""
           ).defaultErrorMessage("Instance type is mandatory")
           .addValidValues(
-                  "SHARE",
+                  "SHARED",
                   "LOCAL")
           .defaultValue("LOCAL")
           .build()),
@@ -74,7 +74,6 @@ public enum VSphereComputeInstanceTemplateConfigurationPropertyToken
           .name("Network name")
           .defaultDescription(
                   "The network identifier.<br />")
-          .defaultValue("default")
           .required(true)
           .build()),
 
@@ -83,7 +82,6 @@ public enum VSphereComputeInstanceTemplateConfigurationPropertyToken
           .name("Original VM")
           .defaultDescription(
                   "The orginal vm template, you need to give the template vm full name(DATACENTER_NAME/vm/VM_NAME) in VC inventory")
-          .defaultValue("default")
           .required(false)
           .build()),
 

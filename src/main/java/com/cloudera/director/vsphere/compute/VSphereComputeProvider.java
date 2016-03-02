@@ -32,7 +32,6 @@ import com.cloudera.director.vsphere.VSphereCredentials;
 import com.cloudera.director.vsphere.exception.VsphereDirectorException;
 import com.cloudera.director.vsphere.service.impl.GroupProvisionService;
 import com.cloudera.director.vsphere.service.intf.IGroupProvisionService;
-import com.google.gson.Gson;
 
 
 /**
@@ -118,7 +117,6 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
       LocalizationContext templateLocalizationContext = SimpleResourceTemplate.getTemplateLocalizationContext(providerLocalizationContext);
 
       try {
-         Gson gson = new Gson();
          IGroupProvisionService groupProvisionService = new GroupProvisionService(this.credentials, template, template.getConfigurationValue(INSTANCE_NAME_PREFIX, templateLocalizationContext), instanceIds, minCount);
          groupProvisionService.provision();
          this.allocations.putAll(groupProvisionService.getAllocations());

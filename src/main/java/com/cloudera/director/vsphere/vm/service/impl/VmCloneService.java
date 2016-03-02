@@ -45,7 +45,6 @@ public class VmCloneService implements IVmCloneService{
    public boolean run() throws Exception {
 
       if(vm == null) {
-         logger.error("No VM " + vm.getName() + " found");
          return false;
       }
 

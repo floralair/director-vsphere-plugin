@@ -33,7 +33,7 @@ public class Node {
    private DatastoreResource targetDatastore;
    private HostResource targetHost;
    private PoolResource targetPool;
-   private String datastoreType;
+   private String storageType;
    private int key;
 
    private List<DiskSpec> disks;
@@ -42,6 +42,7 @@ public class Node {
 
    public Node(String vmName) {
       this.vmName = vmName;
+      this.vmSchema = new VmSchema();
    }
 
    public Node(String instanceId, VSphereComputeInstanceTemplate template, String prefix, String networkName) {
@@ -53,7 +54,7 @@ public class Node {
       this.swapDiskSizeGB = template.getMemorySize();
       this.dataDiskSizeGB = template.getDataDiskSize();
       this.network = template.getNetwork();
-      this.datastoreType = template.getStorageType();
+      this.storageType = template.getStorageType();
       this.key = -1;
 
       this.vmSchema = new VmSchema();
@@ -228,17 +229,17 @@ public class Node {
    }
 
    /**
-    * @return the datastoreType
+    * @return the storageType
     */
-   public String getDatastoreType() {
-      return datastoreType;
+   public String getStorageType() {
+      return storageType;
    }
 
    /**
-    * @param datastoreType the datastoreType to set
+    * @param storageType the storageType to set
     */
-   public void setDatastoreType(String datastoreType) {
-      this.datastoreType = datastoreType;
+   public void setStorageType(String storageType) {
+      this.storageType = storageType;
    }
 
    /**
@@ -273,8 +274,7 @@ public class Node {
             if ( disk.isSwapDisk() ) {
                tmDisk.externalAddress = PlacementUtil.getSwapAddress();
             } else {
-               if (DiskScsiControllerType.LSI_CONTROLLER.equals(disk
-                     .getController())) {
+               if (DiskScsiControllerType.LSI_CONTROLLER.equals(disk.getController())) {
                   if (lsiScsiIndex == PlacementUtil.CONTROLLER_RESERVED_CHANNEL) {
                      // controller reserved channel, *:7, cannot be used by custom disk
                      lsiScsiIndex++;
@@ -304,5 +304,13 @@ public class Node {
 
    public void setNetwork(String network) {
       this.network = network;
+   }
+
+   public boolean needLocalStorage() {
+      return !needSharedStorage();
+   }
+
+   public boolean needSharedStorage() {
+      return ("SHARED").equalsIgnoreCase(this.storageType);
    }
 }

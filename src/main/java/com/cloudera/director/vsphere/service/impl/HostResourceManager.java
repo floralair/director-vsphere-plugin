@@ -5,7 +5,9 @@ package com.cloudera.director.vsphere.service.impl;
 
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.cloudera.director.vsphere.resources.ClusterResource;
 import com.cloudera.director.vsphere.resources.DatastoreResource;
@@ -13,6 +15,7 @@ import com.cloudera.director.vsphere.resources.HostResource;
 import com.cloudera.director.vsphere.resources.NetworkResource;
 import com.cloudera.director.vsphere.resources.PoolResource;
 import com.cloudera.director.vsphere.service.intf.IHostResourceManager;
+import com.vmware.vim25.DatastoreHostMount;
 import com.vmware.vim25.InvalidProperty;
 import com.vmware.vim25.ManagedEntityStatus;
 import com.vmware.vim25.RuntimeFault;
@@ -79,6 +82,13 @@ public class HostResourceManager implements IHostResourceManager {
             datastoreResource.setName(datastore.getName());
             datastoreResource.setFreeSpace(datastore.getSummary().getFreeSpace() / 1024 / 1024 / 1024);
             datastoreResource.setMor(datastore.getMOR());
+            datastoreResource.setType(datastore.getSummary().getType());
+            Set<String> hostMounts = new HashSet<String>();
+            for (DatastoreHostMount datastoreHostMount : datastore.getHost()) {
+               HostSystem hostMount = new HostSystem(rootFolder.getServerConnection(), datastoreHostMount.getKey());
+               hostMounts.add(hostMount.getName());
+            }
+            datastoreResource.setHostMounts(hostMounts);
             datastoreResources.add(datastoreResource);
          }
          hostResource.setDatastores(datastoreResources);
