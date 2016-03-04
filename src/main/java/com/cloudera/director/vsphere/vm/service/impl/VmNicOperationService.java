@@ -57,22 +57,26 @@ public class VmNicOperationService implements IVmNicOperationService{
          nicSpec.setOperation(VirtualDeviceConfigSpecOperation.add);
          VirtualEthernetCard nic =  new VirtualVmxnet3();
          VirtualDeviceBackingInfo nicBacking;
+         VirtualEthernetCardNetworkBackingInfo standardNicBacking;
 
          VirtualDeviceConnectInfo connectInfo = new VirtualDeviceConnectInfo();
          connectInfo.setConnected(true);
          connectInfo.setStartConnected(true);
 
-         if(vcNetwork.isDvPortGroup())
-            nicBacking = (VirtualEthernetCardDistributedVirtualPortBackingInfo)vcNetwork.getBackingInfo();
-         else
-            nicBacking = new VirtualEthernetCardNetworkBackingInfo();
+         if(vcNetwork.isDvPortGroup()) {
+            nicBacking = (VirtualEthernetCardDistributedVirtualPortBackingInfo) vcNetwork.getBackingInfo();
+            nic.setBacking(nicBacking);
+         }else{
+            standardNicBacking = new VirtualEthernetCardNetworkBackingInfo();
+            standardNicBacking.setDeviceName(this.newNetname);
+            nic.setBacking(standardNicBacking);
+         }
 
          Description tmp = new Description();
          tmp.setSummary(this.newNetname);
          tmp.setLabel(this.newNetname);
 
          nic.setAddressType("generated");
-         nic.setBacking(nicBacking);
          nic.setKey(4);
          nic.setConnectable(connectInfo);
          nic.setDeviceInfo(tmp);
@@ -91,6 +95,7 @@ public class VmNicOperationService implements IVmNicOperationService{
          VirtualDevice [] vds = vmConfigInfo.getHardware().getDevice();
          nicSpec.setOperation(VirtualDeviceConfigSpecOperation.edit);
          VirtualDeviceBackingInfo nicBacking;
+         VirtualEthernetCardNetworkBackingInfo standardNicBacking;
          for(int i=0; i<vds.length; i++) {
             //if ((vds[i].getDeviceInfo().getLabel().equalsIgnoreCase(this.netName))) {
             if((vds[i].getKey() == 4000)){
@@ -98,15 +103,19 @@ public class VmNicOperationService implements IVmNicOperationService{
                connectInfo.setConnected(true);
                connectInfo.setStartConnected(true);
 
-               if(vcNetwork.isDvPortGroup())
-                  nicBacking = (VirtualEthernetCardDistributedVirtualPortBackingInfo)vcNetwork.getBackingInfo();
-               else
-                  nicBacking = (VirtualEthernetCardNetworkBackingInfo)vds[i].getBacking();
+               if(vcNetwork.isDvPortGroup()) {
+                  nicBacking = (VirtualEthernetCardDistributedVirtualPortBackingInfo) vcNetwork.getBackingInfo();
+                  vds[i].setBacking(nicBacking);
+               }
+               else {
+                  standardNicBacking = (VirtualEthernetCardNetworkBackingInfo)vds[i].getBacking();
+                  standardNicBacking.setDeviceName(this.newNetname);
+                  vds[i].setBacking(standardNicBacking);
+               }
 
                Description tmp = vds[i].getDeviceInfo();
                tmp.setSummary(this.newNetname);
 
-               vds[i].setBacking(nicBacking);
                vds[i].setConnectable(connectInfo);
                vds[i].setDeviceInfo(tmp);
 
