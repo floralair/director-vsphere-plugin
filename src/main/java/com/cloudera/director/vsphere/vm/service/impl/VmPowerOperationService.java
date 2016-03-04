@@ -7,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.cloudera.director.vsphere.vm.service.intf.IVmPowerOperationService;
+import com.vmware.vim25.FaultToleranceConfigInfo;
+import com.vmware.vim25.VirtualMachinePowerState;
 import com.vmware.vim25.mo.Task;
 import com.vmware.vim25.mo.VirtualMachine;
 
@@ -55,9 +57,19 @@ public class VmPowerOperationService implements IVmPowerOperationService {
    }
 
    private void poweroff() throws Exception {
-      Task task = vm.powerOffVM_Task();
-      if(task.waitForMe()==Task.SUCCESS) {
-         logger.info(vm.getName() + " powered off");
+      FaultToleranceConfigInfo info = vm.getConfig().getFtInfo();
+      if (info != null && info.getRole() == 1) {
+         logger.info("VM " + vm.getName() + " is FT primary VM, disable FT before delete it.");
+         Task turnOffFTtask = vm.turnOffFaultToleranceForVM_Task();
+         if (turnOffFTtask.waitForMe() == Task.SUCCESS) {
+            logger.info("The VM " + vm.getName() + " FT is disabled.");
+         }
+      }
+      if (VirtualMachinePowerState.poweredOn.equals(vm.getRuntime().getPowerState())) {
+         Task task = vm.powerOffVM_Task();
+         if(task.waitForMe()==Task.SUCCESS) {
+            logger.info(vm.getName() + " powered off");
+         }
       }
    }
 
