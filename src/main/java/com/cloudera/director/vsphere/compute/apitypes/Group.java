@@ -27,6 +27,14 @@ public class Group {
 
    public Group() {}
 
+   public Group(Collection<String> instanceIds) {
+      this.name = "group-" + (int) (new Date().getTime()/1000);
+      for (String instanceId : instanceIds) {
+         Node node = new Node(instanceId);
+         this.nodes.add(node);
+      }
+   }
+
    public Group(Collection<String> instanceIds, VSphereComputeInstanceTemplate template, String prefix, int minCount, VirtualMachine templateVm) {
       this.name = "group-" + (int) (new Date().getTime()/1000);
       this.minCount = minCount;
@@ -35,7 +43,7 @@ public class Group {
       this.hostTemplateMap = new HashMap<String, String> ();
 
       for (String instanceId : instanceIds) {
-         Node node = new Node(instanceId, template, prefix, networkName);
+         Node node = new Node(instanceId, template, prefix);
          this.nodes.add(node);
       }
    }
@@ -125,6 +133,10 @@ public class Group {
    }
 
    public Node createNodeFromTemplateVm(final VirtualMachine templateVm) {
+      if (templateVm == null) {
+         return null;
+      }
+
       Node templateNode = new Node(templateVm.getName());
       List<DiskSpec> diskSpecs = new ArrayList<DiskSpec>();
       VirtualDevice[] devices = VmConfigUtil.getDevice(templateVm);

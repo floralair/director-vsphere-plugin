@@ -147,4 +147,16 @@ public class VmService implements IVmService {
       vmNicOperationService.run();
    }
 
+   @Override
+   public boolean destroyVm(String vmName) throws Exception {
+      try {
+         VirtualMachine vm = VmUtil.getVirtualMachine(serviceInstance, vmName);
+
+         VmDestroyService vmDestroyService = new VmDestroyService(vm);
+         return vmDestroyService.run();
+      } catch(Exception e) {
+         logger.error("The VM " + vmName + " already destroyed or can not be destroyed.");
+         return false;
+      }
+   }
 }

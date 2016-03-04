@@ -214,6 +214,8 @@ public class PlacementPlanner implements IPlacementPlanner {
          throw new VsphereDirectorException("There is no enough host to place node " + node.getVmName());
       }
 
+      logger.info("The node " + node.getVmName() + " is placed to host " + node.getTargetHost().getName() + " datastore " + node.getTargetDatastore().getName());
+
       return result;
    }
 

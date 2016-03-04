@@ -31,6 +31,7 @@ import com.cloudera.director.spi.v1.util.ConfigurationPropertiesUtil;
 import com.cloudera.director.vsphere.VSphereCredentials;
 import com.cloudera.director.vsphere.exception.VsphereDirectorException;
 import com.cloudera.director.vsphere.service.impl.GroupProvisionService;
+import com.cloudera.director.vsphere.service.impl.GroupTerminateService;
 import com.cloudera.director.vsphere.service.intf.IGroupProvisionService;
 
 
@@ -166,9 +167,18 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
    public synchronized void delete(VSphereComputeInstanceTemplate template,
          Collection<String> instanceIds) throws InterruptedException {
 
-      for (String currentId : instanceIds) {
-         String host = allocations.remove(currentId);
-         LOG.info(String.format("Deleted allocation: %s -> %s", host, currentId));
+      if (instanceIds.isEmpty()) {
+         return;
+       }
+
+      LocalizationContext providerLocalizationContext = getLocalizationContext();
+      LocalizationContext templateLocalizationContext = SimpleResourceTemplate.getTemplateLocalizationContext(providerLocalizationContext);
+
+      try {
+         GroupTerminateService groupTerminateService = new GroupTerminateService(this.credentials, template, template.getConfigurationValue(INSTANCE_NAME_PREFIX, templateLocalizationContext), instanceIds);
+         groupTerminateService.terminate();
+      } catch (Exception e) {
+         throw new VsphereDirectorException(e);
       }
    }
 }

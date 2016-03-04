@@ -45,7 +45,7 @@ public class Node {
       this.vmSchema = new VmSchema();
    }
 
-   public Node(String instanceId, VSphereComputeInstanceTemplate template, String prefix, String networkName) {
+   public Node(String instanceId, VSphereComputeInstanceTemplate template, String prefix) {
       this.templateVm = template.getTemplateVm();
       this.vmName = prefix + "-" + instanceId;
       this.instanceId = instanceId;

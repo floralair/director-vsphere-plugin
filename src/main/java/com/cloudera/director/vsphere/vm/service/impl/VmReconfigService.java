@@ -8,6 +8,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.cloudera.director.vsphere.compute.apitypes.DiskCreateSpec;
 import com.cloudera.director.vsphere.compute.apitypes.DiskSchema.Disk;
 import com.cloudera.director.vsphere.compute.apitypes.Node;
@@ -28,6 +31,7 @@ import com.vmware.vim25.mo.VirtualMachine;
  *
  */
 public class VmReconfigService implements IVmReconfigService {
+   private static final Logger logger = LoggerFactory.getLogger(VmReconfigService.class);
 
    private final ServiceInstance serviceInstance;
 
@@ -60,6 +64,7 @@ public class VmReconfigService implements IVmReconfigService {
       }
 
       configSpec.setDeviceChange(devChanges.toArray(new VirtualDeviceConfigSpec[devChanges.size()]));
+      logger.info("The node " + node.getVmName() + " configSpec: " + new Gson().toJson(configSpec));
       VmConfigUtil.reconfigure(vm, configSpec);
    }
 

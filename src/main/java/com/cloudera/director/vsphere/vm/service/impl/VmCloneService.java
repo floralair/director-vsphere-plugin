@@ -84,7 +84,7 @@ public class VmCloneService implements IVmCloneService{
          return true;
       }
       else {
-         logger.error("Failure -: VM " + cloneName + " cannot be cloned");
+         logger.error("Failure: VM " + cloneName + " cannot be cloned");
          return false;
       }
    }

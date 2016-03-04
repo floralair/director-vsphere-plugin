@@ -10,6 +10,7 @@ import com.cloudera.director.vsphere.compute.apitypes.DeviceId;
 import com.cloudera.director.vsphere.compute.apitypes.DiskSchema;
 import com.cloudera.director.vsphere.compute.apitypes.DiskSchema.Disk;
 import com.cloudera.director.vsphere.compute.apitypes.DiskType;
+import com.cloudera.director.vsphere.exception.VsphereDirectorException;
 import com.google.gson.Gson;
 import com.vmware.vim25.VirtualDevice;
 import com.vmware.vim25.VirtualDisk;
@@ -25,7 +26,14 @@ import com.vmware.vim25.mo.VirtualMachine;
 public class VmUtil {
 
    public static VirtualMachine getVirtualMachine(ServiceInstance serviceInstance, String vmName) throws Exception {
+      return getVirtualMachine(serviceInstance, vmName, true);
+   }
+
+   public static VirtualMachine getVirtualMachine(ServiceInstance serviceInstance, String vmName, boolean isRaiseException) throws Exception {
       VirtualMachine vm = (VirtualMachine) new InventoryNavigator(serviceInstance.getRootFolder()).searchManagedEntity("VirtualMachine", vmName);
+      if (vm == null && isRaiseException) {
+         throw new VsphereDirectorException("Can not find the VM " + vmName);
+      }
       return vm;
    }
 
