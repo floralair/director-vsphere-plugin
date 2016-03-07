@@ -3,11 +3,8 @@ package com.cloudera.director.vsphere.compute;
 import static com.cloudera.director.spi.v1.model.InstanceTemplate.InstanceTemplateConfigurationPropertyToken.INSTANCE_NAME_PREFIX;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +30,7 @@ import com.cloudera.director.vsphere.exception.VsphereDirectorException;
 import com.cloudera.director.vsphere.service.impl.GroupProvisionService;
 import com.cloudera.director.vsphere.service.impl.GroupTerminateService;
 import com.cloudera.director.vsphere.service.intf.IGroupProvisionService;
+import com.cloudera.director.vsphere.vm.service.impl.VmService;
 
 
 /**
@@ -63,8 +61,6 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
                VSphereComputeInstanceTemplate.getConfigurationProperties())
                .build();
 
-   private final Deque<String> availableHosts = new ArrayDeque<String>();
-   private final Map<String, String> allocations = new HashMap<String, String>();
    private final VSphereCredentials credentials;
    private final Configured configuration;
 
@@ -84,14 +80,6 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
       this.resourceTemplateConfigurationValidator =
             new CompositeConfigurationValidator(METADATA.getResourceTemplateConfigurationValidator(),
                   new VSphereComputeInstanceTemplateConfigurationValidator(this));
-   }
-
-   synchronized Deque<String> getAvailableHosts() {
-      return availableHosts;
-   }
-
-   synchronized Map<String, String> getAllocations() {
-      return allocations;
    }
 
    @Override
@@ -120,27 +108,28 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
       try {
          IGroupProvisionService groupProvisionService = new GroupProvisionService(this.credentials, template, template.getConfigurationValue(INSTANCE_NAME_PREFIX, templateLocalizationContext), instanceIds, minCount);
          groupProvisionService.provision();
-         this.allocations.putAll(groupProvisionService.getAllocations());
       } catch (Exception e) {
          throw new VsphereDirectorException(e);
       }
    }
 
    @Override
-   public synchronized Collection<VSphereComputeInstance> find(
-         VSphereComputeInstanceTemplate template, Collection<String> instanceIds)
-               throws InterruptedException {
+   public synchronized Collection<VSphereComputeInstance> find(VSphereComputeInstanceTemplate template, Collection<String> instanceIds) throws InterruptedException {
+
+      LocalizationContext providerLocalizationContext = getLocalizationContext();
+      LocalizationContext templateLocalizationContext = SimpleResourceTemplate.getTemplateLocalizationContext(providerLocalizationContext);
+
+      VmService vmService = new VmService(credentials);
 
       List<VSphereComputeInstance> result = new ArrayList<VSphereComputeInstance>();
-      for (String currentId : instanceIds) {
-         String host = allocations.get(currentId);
-         if (host != null) {
-            try {
-               result.add(new VSphereComputeInstance(template, currentId, InetAddress.getByName(host)));
 
-            } catch (UnknownHostException e) {
-               throw new RuntimeException(e);
-            }
+      for (String currentId : instanceIds) {
+         try {
+            String decoratedInstanceName = decorateInstanceName(template, currentId, templateLocalizationContext);
+            String currentIpAddress = vmService.getIpAddress(decoratedInstanceName);
+            result.add(new VSphereComputeInstance(template, currentId, InetAddress.getByName(currentIpAddress)));
+         } catch (Exception e) {
+            throw new RuntimeException(e);
          }
       }
 
@@ -148,12 +137,24 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
    }
 
    @Override
-   public synchronized Map<String, InstanceState> getInstanceState(
-         VSphereComputeInstanceTemplate template, Collection<String> instanceIds) {
+   public synchronized Map<String, InstanceState> getInstanceState(VSphereComputeInstanceTemplate template, Collection<String> instanceIds) {
+
+      LocalizationContext providerLocalizationContext = getLocalizationContext();
+      LocalizationContext templateLocalizationContext = SimpleResourceTemplate.getTemplateLocalizationContext(providerLocalizationContext);
+
+      VmService vmService = new VmService(credentials);
 
       Map<String, InstanceState> result = new HashMap<String, InstanceState>();
       for (String currentId : instanceIds) {
-         if (allocations.containsKey(currentId)) {
+         String currentIpAddress = null;
+         try {
+            String decoratedInstanceName = decorateInstanceName(template, currentId, templateLocalizationContext);
+            currentIpAddress = vmService.getIpAddress(decoratedInstanceName);
+         } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+         }
+         if (currentIpAddress != null) {
             result.put(currentId, new SimpleInstanceState(InstanceStatus.RUNNING));
          } else {
             result.put(currentId, new SimpleInstanceState(InstanceStatus.DELETED));
@@ -164,8 +165,7 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
    }
 
    @Override
-   public synchronized void delete(VSphereComputeInstanceTemplate template,
-         Collection<String> instanceIds) throws InterruptedException {
+   public synchronized void delete(VSphereComputeInstanceTemplate template, Collection<String> instanceIds) throws InterruptedException {
 
       if (instanceIds.isEmpty()) {
          return;
@@ -181,4 +181,8 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
          throw new VsphereDirectorException(e);
       }
    }
+
+   private static String decorateInstanceName(VSphereComputeInstanceTemplate template, String currentId, LocalizationContext templateLocalizationContext) {
+       return template.getConfigurationValue(INSTANCE_NAME_PREFIX, templateLocalizationContext) + "-" + currentId;
+     }
 }

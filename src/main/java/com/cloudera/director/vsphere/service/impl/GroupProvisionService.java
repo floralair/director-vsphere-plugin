@@ -4,7 +4,6 @@
 package com.cloudera.director.vsphere.service.impl;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 
 import com.cloudera.director.vsphere.VSphereCredentials;
@@ -27,7 +26,6 @@ public class GroupProvisionService implements IGroupProvisionService {
    private Group group;
    private Folder rootFolder;
    private VmService vmService;
-   private Map<String, String> allocations;
 
    public GroupProvisionService() {
 
@@ -38,7 +36,6 @@ public class GroupProvisionService implements IGroupProvisionService {
       this.rootFolder = serviceInstance.getRootFolder();
       this.group = new Group(instanceIds, template, prefix, minCount, VmUtil.getVirtualMachine(serviceInstance, template.getTemplateVm()));
       this.vmService = new VmService(credentials);
-      this.allocations = new HashMap<String, String>();
    }
 
    /**
@@ -86,23 +83,6 @@ public class GroupProvisionService implements IGroupProvisionService {
     */
    public void setVmService(VmService vmService) {
       this.vmService = vmService;
-   }
-
-
-   /**
-    * @return the allocations
-    */
-   @Override
-   public Map<String, String> getAllocations() {
-      return allocations;
-   }
-
-
-   /**
-    * @param allocations the allocations to set
-    */
-   public void setAllocations(Map<String, String> allocations) {
-      this.allocations = allocations;
    }
 
    @Override
@@ -156,8 +136,7 @@ public class GroupProvisionService implements IGroupProvisionService {
 
    private void getVmsIpAddress() throws Exception {
       for (Node node : group.getNodes()) {
-         String ipAddress = vmService.getIpAddress(node.getVmName());
-         allocations.put(node.getInstanceId(), ipAddress);
+         vmService.getIpAddress(node.getVmName());
       }
    }
 
