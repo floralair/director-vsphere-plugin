@@ -4,8 +4,6 @@
 package com.cloudera.director.vsphere.service.impl;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,14 +28,12 @@ public class GroupTerminateService implements IGroupTerminateService {
    private final Group group;
    private final Folder rootFolder;
    private final VmService vmService;
-   private final Map<String, String> allocations;
 
    public GroupTerminateService(VSphereCredentials credentials, VSphereComputeInstanceTemplate template, String prefix, Collection<String> instanceIds) throws Exception {
       ServiceInstance serviceInstance = credentials.getServiceInstance();
       this.rootFolder = serviceInstance.getRootFolder();
       this.group = new Group(instanceIds, template, prefix, 0, VmUtil.getVirtualMachine(serviceInstance, template.getTemplateVm(), false));
       this.vmService = new VmService(credentials);
-      this.allocations = new HashMap<String, String>();
    }
 
    /**
@@ -61,18 +57,10 @@ public class GroupTerminateService implements IGroupTerminateService {
       return vmService;
    }
 
-   /**
-    * @return the allocations
-    */
-   public Map<String, String> getAllocations() {
-      return allocations;
-   }
-
    @Override
    public void terminate() throws Exception {
       for (Node node : group.getNodes()) {
          terminateNode(node);
-         allocations.remove(node.getInstanceId());
          logger.info(String.format("Deleted allocation: %s -> %s", node.getVmName(), node.getInstanceId()));
       }
    }

@@ -62,6 +62,11 @@ public class VmService implements IVmService {
    }
 
    @Override
+   public VirtualMachine getVm(String vmName) throws Exception {
+     return VmUtil.getVirtualMachine(serviceInstance, vmName);
+   }
+
+   @Override
    public String getIpAddress(String vmName) throws Exception {
       VirtualMachine vm = VmUtil.getVirtualMachine(serviceInstance, vmName);
 

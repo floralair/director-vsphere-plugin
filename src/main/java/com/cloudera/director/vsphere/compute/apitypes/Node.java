@@ -313,4 +313,12 @@ public class Node {
    public boolean needSharedStorage() {
       return ("SHARED").equalsIgnoreCase(this.storageType);
    }
+
+   public int getTotalDiskSize() {
+      int size = 0;
+      for (DiskSpec disk : disks) {
+         size += disk.getSize();
+      }
+      return size;
+   }
 }

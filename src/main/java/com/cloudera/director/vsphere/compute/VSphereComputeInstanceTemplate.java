@@ -8,6 +8,10 @@ import com.cloudera.director.spi.v1.model.ConfigurationProperty;
 import com.cloudera.director.spi.v1.model.Configured;
 import com.cloudera.director.spi.v1.model.LocalizationContext;
 import com.cloudera.director.spi.v1.util.ConfigurationPropertiesUtil;
+import com.cloudera.director.vsphere.VSphereCredentials;
+import com.cloudera.director.vsphere.exception.VsphereDirectorException;
+import com.cloudera.director.vsphere.utils.NetworkUtil;
+import com.cloudera.director.vsphere.utils.VmUtil;
 
 /**
   * @author chiq
@@ -36,7 +40,6 @@ public class VSphereComputeInstanceTemplate extends ComputeInstanceTemplate {
   private final long dataDiskSize;
   private final String templateVm;
   private final String network;
-  private final String haType;
 
 public String getType() {
    return type;
@@ -66,10 +69,6 @@ public String getNetwork() {
    return network;
 }
 
-public String getHaType() {
-   return haType;
-}
-
 public static List<ConfigurationProperty> getConfigurationProperties() {
     return CONFIGURATION_PROPERTIES;
   }
@@ -92,8 +91,20 @@ public static List<ConfigurationProperty> getConfigurationProperties() {
           VSphereComputeInstanceTemplateConfigurationPropertyToken.TEMPLATE_VM,localizationContext);
     network = configuration.getConfigurationValue(
           VSphereComputeInstanceTemplateConfigurationPropertyToken.NETWORK_NAME,localizationContext);
-    haType = configuration.getConfigurationValue(
-          VSphereComputeInstanceTemplateConfigurationPropertyToken.HA_TYPE,localizationContext);
 
+  }
+
+  public void validate(VSphereCredentials credentials) {
+     try {
+        VmUtil.getVirtualMachine(credentials.getServiceInstance(), templateVm, true);
+     } catch (Exception e) {
+        throw new VsphereDirectorException("There is no template VM named " + templateVm + " in the vCenter server.", e);
+     }
+
+     try {
+        NetworkUtil.getNetwork(credentials.getServiceInstance(), network);
+     } catch (Exception e) {
+        throw new VsphereDirectorException("There is no network named " + network + " in the vCenter server.", e);
+     }
   }
 }

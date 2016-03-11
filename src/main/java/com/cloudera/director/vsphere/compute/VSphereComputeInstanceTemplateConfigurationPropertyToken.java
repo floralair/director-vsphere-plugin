@@ -83,20 +83,6 @@ public enum VSphereComputeInstanceTemplateConfigurationPropertyToken
           .defaultDescription(
                   "The orginal vm template, you need to give the template vm full name(DATACENTER_NAME/vm/VM_NAME) in VC inventory")
           .required(false)
-          .build()),
-
-  HA_TYPE(new SimpleConfigurationPropertyBuilder()
-          .configKey("haType")
-          .name("HA type")
-          .required(false)
-          .widget(ConfigurationProperty.Widget.OPENLIST)
-          .defaultDescription(
-                  "Select HA type as \"OFF\" , \"ON\" or \"FT\"")
-          .addValidValues(
-          "OFF",
-          "ON",
-          "FT")
-          .defaultValue("OFF")
           .build());
 
   private final ConfigurationProperty configurationProperty;

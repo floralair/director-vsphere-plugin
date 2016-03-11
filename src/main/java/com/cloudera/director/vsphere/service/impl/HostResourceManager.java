@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.cloudera.director.vsphere.exception.VsphereDirectorException;
 import com.cloudera.director.vsphere.resources.ClusterResource;
 import com.cloudera.director.vsphere.resources.DatastoreResource;
 import com.cloudera.director.vsphere.resources.HostResource;
@@ -50,7 +51,7 @@ public class HostResourceManager implements IHostResourceManager {
       List<HostResource> filteredHosts = new ArrayList<HostResource>();
 
       if (networkName == null || networkName.isEmpty()) {
-         return filteredHosts;
+         throw new VsphereDirectorException("The network name is empty, please give the network name.");
       }
 
       ManagedEntity[] managedEntities = new InventoryNavigator(rootFolder).searchManagedEntities(new String[][] { {"HostSystem", "name" }, }, true);
@@ -73,6 +74,11 @@ public class HostResourceManager implements IHostResourceManager {
                networkResources.add(networkResource);
             }
          }
+
+         if (networkResources.isEmpty()) {
+            throw new VsphereDirectorException("There is no network named " + networkName +" in the vCenter environment.");
+         }
+
          hostResource.setNetworks(networkResources);
 
          List<DatastoreResource> datastoreResources = new ArrayList<DatastoreResource>();
@@ -107,6 +113,10 @@ public class HostResourceManager implements IHostResourceManager {
          hostResource.setCluster(clusterResource);
 
          filteredHosts.add(hostResource);
+      }
+
+      if (filteredHosts.isEmpty()) {
+         throw new VsphereDirectorException("There is no host which using the network named " + networkName + ".");
       }
 
       return filteredHosts;

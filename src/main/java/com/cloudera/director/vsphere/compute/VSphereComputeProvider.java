@@ -8,7 +8,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.cloudera.director.spi.v1.compute.util.AbstractComputeInstance;
 import com.cloudera.director.spi.v1.compute.util.AbstractComputeProvider;
@@ -30,7 +32,10 @@ import com.cloudera.director.vsphere.exception.VsphereDirectorException;
 import com.cloudera.director.vsphere.service.impl.GroupProvisionService;
 import com.cloudera.director.vsphere.service.impl.GroupTerminateService;
 import com.cloudera.director.vsphere.service.intf.IGroupProvisionService;
+import com.cloudera.director.vsphere.vm.service.impl.VmPowerOperationService;
 import com.cloudera.director.vsphere.vm.service.impl.VmService;
+import com.vmware.vim25.VirtualMachinePowerState;
+import com.vmware.vim25.mo.VirtualMachine;
 
 
 /**
@@ -44,7 +49,7 @@ import com.cloudera.director.vsphere.vm.service.impl.VmService;
 public class VSphereComputeProvider
 extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTemplate> {
 
-   private static final Logger LOG = Logger.getLogger(VSphereComputeProvider.class.getName());
+   private static final Logger LOG = LoggerFactory.getLogger(VmPowerOperationService.class);
 
    protected static final List<ConfigurationProperty> CONFIGURATION_PROPERTIES =
          ConfigurationPropertiesUtil.asConfigurationPropertyList(VSphereComputeProviderConfigurationPropertyToken.values());
@@ -106,6 +111,7 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
       LocalizationContext templateLocalizationContext = SimpleResourceTemplate.getTemplateLocalizationContext(providerLocalizationContext);
 
       try {
+         template.validate(this.credentials);
          IGroupProvisionService groupProvisionService = new GroupProvisionService(this.credentials, template, template.getConfigurationValue(INSTANCE_NAME_PREFIX, templateLocalizationContext), instanceIds, minCount);
          groupProvisionService.provision();
       } catch (Exception e) {
@@ -146,19 +152,33 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
 
       Map<String, InstanceState> result = new HashMap<String, InstanceState>();
       for (String currentId : instanceIds) {
-         String currentIpAddress = null;
+         String decoratedInstanceName = null;
+         VirtualMachine vm = null;
          try {
-            String decoratedInstanceName = decorateInstanceName(template, currentId, templateLocalizationContext);
-            currentIpAddress = vmService.getIpAddress(decoratedInstanceName);
+            decoratedInstanceName = decorateInstanceName(template, currentId, templateLocalizationContext);
+            vm = vmService.getVm(decoratedInstanceName);
          } catch (Exception e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            if (vm == null) {
+               result.put(currentId, new SimpleInstanceState(InstanceStatus.DELETED));
+               LOG.info("Node '{}' not found.", decoratedInstanceName);
+            } else {
+               result.put(currentId, new SimpleInstanceState(InstanceStatus.UNKNOWN));
+               LOG.info("Node '{}' found but the status is unnormal.", decoratedInstanceName);
+            }
          }
-         if (currentIpAddress != null) {
-            result.put(currentId, new SimpleInstanceState(InstanceStatus.RUNNING));
-         } else {
-            result.put(currentId, new SimpleInstanceState(InstanceStatus.DELETED));
+
+         if (vm != null) {
+            if (VirtualMachinePowerState.poweredOn.equals(vm.getRuntime().getPowerState())) {
+               if (vm.getGuest().getIpAddress() != null) {
+                  result.put(currentId, new SimpleInstanceState(InstanceStatus.RUNNING));
+               } else {
+                  result.put(currentId, new SimpleInstanceState(InstanceStatus.UNKNOWN));
+               }
+            } else if (VirtualMachinePowerState.poweredOff.equals(vm.getRuntime().getPowerState()) || VirtualMachinePowerState.suspended.equals(vm.getRuntime().getPowerState())) {
+               result.put(currentId, new SimpleInstanceState(InstanceStatus.STOPPED));
+            }
          }
+
       }
 
       return result;
@@ -169,7 +189,7 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
 
       if (instanceIds.isEmpty()) {
          return;
-       }
+      }
 
       LocalizationContext providerLocalizationContext = getLocalizationContext();
       LocalizationContext templateLocalizationContext = SimpleResourceTemplate.getTemplateLocalizationContext(providerLocalizationContext);
@@ -183,6 +203,7 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
    }
 
    private static String decorateInstanceName(VSphereComputeInstanceTemplate template, String currentId, LocalizationContext templateLocalizationContext) {
-       return template.getConfigurationValue(INSTANCE_NAME_PREFIX, templateLocalizationContext) + "-" + currentId;
-     }
+      return template.getConfigurationValue(INSTANCE_NAME_PREFIX, templateLocalizationContext) + "-" + currentId;
+   }
+
 }

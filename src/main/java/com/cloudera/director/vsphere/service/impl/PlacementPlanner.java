@@ -5,10 +5,7 @@ package com.cloudera.director.vsphere.service.impl;
 
 import java.rmi.RemoteException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.log4j.Logger;
 
@@ -136,111 +133,73 @@ public class PlacementPlanner implements IPlacementPlanner {
 
    @Override
    public void placeDisk() {
-      Map<HostResource, List<DatastoreResource>> host2DatastoreMap = getHost2DatastoreMap();
-      List<String> usedHosts = new ArrayList<String>();
       for (Node node : group.getNodes()) {
          List<DiskSpec> disks;
 
-         int totalDiskSize = getDiskSize(node.getDisks());
-         disks = placeUnSeparableDisks(node, node.getDisks(), totalDiskSize, host2DatastoreMap, usedHosts);
+         disks = placeUnSeparableDisks(node);
          if (disks == null) {
-            logger.info("There is no enough free space to place " + totalDiskSize + " GB disk.");
+            logger.info("There is no enough free space to place " + node.getTotalDiskSize() + " GB disk.");
          }
 
          node.toDiskSchema();
       }
    }
 
-   private List<DiskSpec> placeUnSeparableDisks(Node node, List<DiskSpec> disks, int totalDiskSize, Map<HostResource, List<DatastoreResource>> host2DatastoreMap, List<String> usedHosts) {
+   private List<DiskSpec> placeUnSeparableDisks(Node node) {
       List<DiskSpec> result = new ArrayList<DiskSpec>();
 
-      for (HostResource host : host2DatastoreMap.keySet()) {
-         if (usedHosts.contains(host.getName())) {
-            continue;
+      HostResource targetHost = getTargetHost(node);
+      DatastoreResource targetDatastore  = targetHost.getNodeTargetDatastore();
+
+      for (DiskSpec disk : node.getDisks()) {
+         disk.setTargetDs(targetDatastore.getName());
+         targetDatastore.allocate(disk.getSize());
+         result.add(disk);
+         if (disk.isSystemDisk()) {
+            node.setTargetDatastore(targetDatastore);
          }
-
-         List<DatastoreResource> datastores = host2DatastoreMap.get(host);
-
-         // balance the datastore usage among multiple calls
-         Collections.shuffle(datastores);
-
-         int i = 0;
-         for (; i < datastores.size(); i++) {
-            boolean placed = false;
-            DatastoreResource ds = datastores.get(i);
-
-            if (node.needLocalStorage() && ds.isSharedStorage()) {
-               continue;
-            }
-
-            if (node.needSharedStorage() && ds.isLocalStorage()) {
-               continue;
-            }
-
-            if (totalDiskSize <= ds.getFreeSpace()) {
-               for (DiskSpec disk : disks) {
-                  disk.setTargetDs(ds.getName());
-                  ds.allocate(disk.getSize());
-                  result.add(disk);
-                  if (disk.isSystemDisk()) {
-                     node.setTargetDatastore(ds);
-                  }
-                  syncUpHostMounts(ds, host2DatastoreMap);
-                  node.setTargetHost(host);
-                  node.setTargetPool(host.getCluster().getPool());
-                  usedHosts.add(host.getName());
-               }
-               placed = true;
-            }
-
-            if (placed) {
-               break;
-            }
-         }
-
-         // cannot find a datastore to hold this node
-         if (i >= datastores.size()) {
-            logger.error("placeUnSeparableDisks: not sufficient " + node.getStorageType() + " storage space to place node " + node.getVmName());
-            throw new VsphereDirectorException("Not sufficient " + node.getStorageType() + " storage space to place node " + node.getVmName());
-         }
-
-         if (node.getTargetHost() != null) {
-            break;
-         }
+         syncUpHostMounts(targetDatastore);
+         node.setTargetHost(targetHost);
+         node.setTargetPool(targetHost.getCluster().getPool());
       }
-
-      if (node.getTargetHost() == null) {
-         logger.error("There is no enough host to place node " + node.getVmName());
-         throw new VsphereDirectorException("There is no enough host to place node " + node.getVmName());
-      }
+      targetDatastore.setNodesCount(targetDatastore.getNodesCount() + 1);
+      targetHost.setNodeTargetDatastore(null);
+      targetHost.setNodesCount(targetHost.getNodesCount() + 1);
 
       logger.info("The node " + node.getVmName() + " is placed to host " + node.getTargetHost().getName() + " datastore " + node.getTargetDatastore().getName());
 
       return result;
    }
 
-   private int getDiskSize(List<DiskSpec> disks) {
-      int size = 0;
-      for (DiskSpec disk : disks) {
-         size += disk.getSize();
-      }
-      return size;
-   }
-
-   private Map<HostResource, List<DatastoreResource>> getHost2DatastoreMap() {
-      Map<HostResource, List<DatastoreResource>> host2DatastoreMap = new HashMap<HostResource, List<DatastoreResource>>();
+   private HostResource getTargetHost(Node node) {
+      HostResource targetHost = null;
       for (HostResource host : hostResources) {
-         host2DatastoreMap.put(host, host.getDatastores());
+         if (host.getTargetDatastore(node) == null) {
+            continue;
+         }
+
+         if (targetHost == null) {
+            targetHost = host;
+         } else {
+            if (targetHost.getNodesCount() > host.getNodesCount()) {
+               targetHost = host;
+            }
+         }
       }
-      return host2DatastoreMap;
+
+      if (targetHost == null) {
+         logger.error("placeUnSeparableDisks: not sufficient " + node.getStorageType() + " storage space to place node " + node.getVmName());
+         throw new VsphereDirectorException("Not sufficient " + node.getStorageType() + " storage space to place node " + node.getVmName());
+      }
+
+      return targetHost;
    }
 
-   private void syncUpHostMounts(DatastoreResource datastore, Map<HostResource, List<DatastoreResource>> host2DatastoreMap) {
+   private void syncUpHostMounts(DatastoreResource datastore) {
       for (String hostMount : datastore.getHostMounts()) {
-         for (HostResource host : host2DatastoreMap.keySet()) {
+         for (HostResource host : hostResources) {
             if (host.getName().equals(hostMount)) {
-               List<DatastoreResource> oldDatastores = host2DatastoreMap.get(host);
-               for (DatastoreResource oldDatastore : oldDatastores) {
+               for (DatastoreResource oldDatastore : host.getDatastores()) {
                   if (datastore.getName().equals(oldDatastore.getName())) {
                      oldDatastore.setFreeSpace(datastore.getFreeSpace());
                   }

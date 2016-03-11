@@ -65,7 +65,7 @@ public class VmPowerOperationService implements IVmPowerOperationService {
             logger.info("The VM " + vm.getName() + " FT is disabled.");
          }
       }
-      if (VirtualMachinePowerState.poweredOn.equals(vm.getRuntime().getPowerState())) {
+      if (VirtualMachinePowerState.poweredOn.equals(vm.getRuntime().getPowerState()) || VirtualMachinePowerState.suspended.equals(vm.getRuntime().getPowerState())) {
          Task task = vm.powerOffVM_Task();
          if(task.waitForMe()==Task.SUCCESS) {
             logger.info(vm.getName() + " powered off");

@@ -5,6 +5,7 @@ package com.cloudera.director.vsphere.resources;
 
 import java.util.Set;
 
+import com.cloudera.director.vsphere.compute.apitypes.Node;
 import com.cloudera.director.vsphere.utils.VsphereDirectorAssert;
 import com.vmware.vim25.ManagedObjectReference;
 
@@ -19,6 +20,7 @@ public class DatastoreResource {
    private ManagedObjectReference mor;
    private String type;
    private Set<String> hostMounts;
+   private int nodesCount = 0;
 
    /**
     * @return the name
@@ -85,6 +87,20 @@ public class DatastoreResource {
       this.hostMounts = hostMounts;
    }
 
+   /**
+    * @param nodesCount the nodesCount to set
+    */
+   public void setNodesCount(int nodesCount) {
+      this.nodesCount = nodesCount;
+   }
+
+   /**
+    * @return the nodesCount
+    */
+   public int getNodesCount() {
+      return nodesCount;
+   }
+
    // TODO Need to consider there is only one datastoreHostMount on shared storage
    public boolean isLocalStorage() {
       return ("VMFS").equalsIgnoreCase(this.type) && this.hostMounts.size() == 1;
@@ -97,6 +113,17 @@ public class DatastoreResource {
    public void allocate(long sizeGB) {
       VsphereDirectorAssert.check(this.freeSpace - sizeGB >= 0);
       this.freeSpace -= sizeGB;
+   }
+
+   public boolean canBeAllocated(Node node) {
+      boolean canBeAllocated = false;
+      if (node.needLocalStorage() && isLocalStorage() && this.freeSpace >= node.getTotalDiskSize()) {
+         canBeAllocated = true;
+      }
+      if (node.needSharedStorage() && isSharedStorage() && this.freeSpace >= node.getTotalDiskSize()) {
+         canBeAllocated = true;
+      }
+      return canBeAllocated;
    }
 
 }

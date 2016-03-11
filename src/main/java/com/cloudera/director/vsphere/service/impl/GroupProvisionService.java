@@ -139,5 +139,4 @@ public class GroupProvisionService implements IGroupProvisionService {
          vmService.getIpAddress(node.getVmName());
       }
    }
-
 }

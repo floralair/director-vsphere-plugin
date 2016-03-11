@@ -6,6 +6,7 @@ package com.cloudera.director.vsphere.vm.service.intf;
 import com.cloudera.director.vsphere.compute.apitypes.Node;
 import com.cloudera.director.vsphere.resources.VcNetwork;
 import com.vmware.vim25.ManagedObjectReference;
+import com.vmware.vim25.mo.VirtualMachine;
 
 public interface IVmService {
 
@@ -61,5 +62,12 @@ public interface IVmService {
     * @throws Exception
     */
    public boolean destroyVm(String vmName) throws Exception;
+
+   /**
+    * @param vmName
+    * @return
+    * @throws Exception
+    */
+   public VirtualMachine getVm(String vmName) throws Exception;
 
 }
