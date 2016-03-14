@@ -41,4 +41,10 @@ public interface IVmReconfigService {
     */
    void enableDiskUUID(Node node) throws Exception;
 
+   /**
+    * @param node
+    * @throws Exception
+    */
+   void configNetworks(Node node) throws Exception;
+
 }

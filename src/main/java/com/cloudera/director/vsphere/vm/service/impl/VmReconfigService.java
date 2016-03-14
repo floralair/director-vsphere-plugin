@@ -14,6 +14,8 @@ import org.slf4j.LoggerFactory;
 import com.cloudera.director.vsphere.compute.apitypes.DiskCreateSpec;
 import com.cloudera.director.vsphere.compute.apitypes.DiskSchema.Disk;
 import com.cloudera.director.vsphere.compute.apitypes.Node;
+import com.cloudera.director.vsphere.resources.NetworkResource;
+import com.cloudera.director.vsphere.resources.VcNetwork;
 import com.cloudera.director.vsphere.utils.DiskSchemaUtil;
 import com.cloudera.director.vsphere.utils.VmConfigUtil;
 import com.cloudera.director.vsphere.utils.VmUtil;
@@ -107,6 +109,40 @@ public class VmReconfigService implements IVmReconfigService {
       VirtualMachineConfigSpec configSpec = new VirtualMachineConfigSpec();
       configSpec.setFlags(flagInfo);
       vm.reconfigVM_Task(configSpec);
+   }
+
+   @Override
+   public void configNetworks(Node node) throws Exception {
+      VirtualMachine vm = VmUtil.getVirtualMachine(serviceInstance, node.getVmName());
+      VcNetwork vcNet = null;
+      String operation = null;
+      String network = null;
+      String newNetwork = null;
+
+      for (NetworkResource networkResource : node.getTargetHost().getNetworks()) {
+         //the setting network for Cloudera director exists in Esx hosts netowrk which the node vm is located in
+         if (node.getNetwork().equals(networkResource.getName())) {
+            vcNet = new VcNetwork();
+            vcNet.update(serviceInstance.getRootFolder().getServerConnection(), networkResource.toVim25Network(serviceInstance));
+
+            if(vm.getNetworks().length == 0){
+               operation = "add";
+               network = node.getNetwork();
+            } else {
+               operation = "edit";
+               network = vm.getNetworks()[0].getName();
+               newNetwork = node.getNetwork();
+            }
+            break;
+         }
+      }
+
+      if (vcNet == null) {
+         throw new Exception("Network " + node.getNetwork() + " is not defined on ESX hosts");
+      }
+
+      VmNicOperationService vmNicOperationService = new VmNicOperationService(vm, operation, vcNet, network, newNetwork);
+      vmNicOperationService.run();
    }
 
 }

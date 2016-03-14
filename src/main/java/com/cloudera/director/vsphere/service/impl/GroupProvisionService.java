@@ -91,7 +91,7 @@ public class GroupProvisionService implements IGroupProvisionService {
       cloneVms();
       reconfigVms();
       startVms();
-      getVmsIpAddress();
+      waitVmsReady();
    }
 
    public void getPlacementPlan() throws Exception {
@@ -134,9 +134,10 @@ public class GroupProvisionService implements IGroupProvisionService {
       }
    }
 
-   private void getVmsIpAddress() throws Exception {
+   private void waitVmsReady() throws Exception {
       for (Node node : group.getNodes()) {
-         vmService.getIpAddress(node.getVmName());
+         vmService.waitVmReady(node.getVmName());
       }
    }
+
 }

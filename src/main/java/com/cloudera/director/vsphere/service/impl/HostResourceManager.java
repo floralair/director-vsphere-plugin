@@ -71,6 +71,7 @@ public class HostResourceManager implements IHostResourceManager {
             if (networkName.equals(network.getName())) {
                NetworkResource networkResource = new NetworkResource();
                networkResource.setName(network.getName());
+               networkResource.setMor(network.getMOR());
                networkResources.add(networkResource);
             }
          }

@@ -9,13 +9,10 @@ import org.slf4j.LoggerFactory;
 import com.cloudera.director.vsphere.VSphereCredentials;
 import com.cloudera.director.vsphere.compute.apitypes.Node;
 import com.cloudera.director.vsphere.exception.VsphereDirectorException;
-import com.cloudera.director.vsphere.resources.VcNetwork;
 import com.cloudera.director.vsphere.utils.VmUtil;
 import com.cloudera.director.vsphere.vm.service.intf.IVmService;
 import com.vmware.vim25.ManagedObjectReference;
 import com.vmware.vim25.mo.Folder;
-import com.vmware.vim25.mo.HostSystem;
-import com.vmware.vim25.mo.Network;
 import com.vmware.vim25.mo.ServiceInstance;
 import com.vmware.vim25.mo.VirtualMachine;
 
@@ -70,22 +67,10 @@ public class VmService implements IVmService {
    public String getIpAddress(String vmName) throws Exception {
       VirtualMachine vm = VmUtil.getVirtualMachine(serviceInstance, vmName);
 
-      if(vm == null) {
-         logger.error("No VM " + vmName + " found");
-         return null;
-      }
-
-      String ipAddress = null;
-      int retryTimes = 600; // Raise an error if the VM can not get IP address within 30 minutes
-
-      while ((ipAddress == null || ipAddress.contains(":")) && retryTimes > 0) {
-         ipAddress = vm.getGuest().getIpAddress();
-         Thread.sleep(3000);
-         retryTimes --;
-      }
+      String ipAddress = vm.getGuest().getIpAddress();
 
       if (ipAddress == null) {
-         throw new VsphereDirectorException("The node " + vmName + " can not get IP address within 30 minutes, please check the networking environment.");
+         throw new VsphereDirectorException("The node " + vmName + " have no IP address.");
       }
 
       return ipAddress;
@@ -102,54 +87,10 @@ public class VmService implements IVmService {
 
       vmReconfigService.setVolumesToMachineId(node);
 
-      configNetworks(node);
+      vmReconfigService.configNetworks(node);
 
       // enable disk UUID
       vmReconfigService.enableDiskUUID(node);
-   }
-
-   /**
-    * @param node
-    */
-   @Override
-   public void configNetworks(Node node) throws Exception {
-      ManagedObjectReference mob = node.getTargetHost().getMor();
-      HostSystem hostSystem = new HostSystem(rootFolder.getServerConnection(), mob);
-
-      Network[] networks = hostSystem.getNetworks();
-      logger.info("The host  is " + hostSystem.getName());
-      boolean tag = false;
-      for (Network network : networks) {
-         //the setting network for Cloudera director exists in Esx hosts netowrk which the node vm is located in
-         logger.info("The ESX host network is " + network.getName());
-         if (node.getNetwork().equals(network.getName())) {
-            tag = true;
-            VirtualMachine vm = VmUtil.getVirtualMachine(serviceInstance, node.getVmName());
-            if(vm.getNetworks().length == 0){
-               VcNetwork vcNet = new VcNetwork();
-               vcNet.update(rootFolder.getServerConnection(), network);
-               nicOps(node.getVmName(), "add", vcNet, node.getNetwork(), null);
-               break;
-            }else {
-               //edit existing network
-               VcNetwork vcNet = new VcNetwork();
-               vcNet.update(rootFolder.getServerConnection(), network);
-               nicOps(vm.getName(), "edit", vcNet, vm.getNetworks()[0].getName(), node.getNetwork());
-               break;
-            }
-         }
-      }
-
-      if(tag == false)
-         throw new Exception("Network " + node.getNetwork() + " is not defined on ESX hosts");
-   }
-
-   @Override
-   public void nicOps(String vmName, String operation, VcNetwork vcNet, String netName, String newNetwork) throws Exception {
-      VirtualMachine vm = VmUtil.getVirtualMachine(serviceInstance, vmName);
-
-      VmNicOperationService vmNicOperationService = new VmNicOperationService(vm, operation, vcNet, netName, newNetwork);
-      vmNicOperationService.run();
    }
 
    @Override
@@ -163,6 +104,14 @@ public class VmService implements IVmService {
          logger.error("The VM " + vmName + " already destroyed or can not be destroyed.");
          return false;
       }
+   }
+
+   @Override
+   public void waitVmReady(String vmName) throws Exception {
+      VirtualMachine vm = VmUtil.getVirtualMachine(serviceInstance, vmName);
+
+      WaitVmReadyService waitVmReadyService = new WaitVmReadyService(serviceInstance, vm);
+      waitVmReadyService.run();
    }
 
 }
