@@ -15,38 +15,55 @@ import com.cloudera.director.spi.v1.provider.util.AbstractCloudProvider;
 import com.cloudera.director.spi.v1.provider.util.SimpleCloudProviderMetadataBuilder;
 import com.cloudera.director.spi.v1.provider.util.SimpleCredentialsProviderMetadata;
 import com.cloudera.director.vsphere.compute.VSphereComputeProvider;
+import com.cloudera.director.vsphere.resourcesplacement.ResourcesPlacement;
 
 public class VSphereProvider extends AbstractCloudProvider {
 
-  public static final String ID = "vSphere";
+   public static final String ID = "vSphere";
 
-  private static final List<ResourceProviderMetadata> RESOURCE_PROVIDER_METADATA =
-      Collections.singletonList(VSphereComputeProvider.METADATA);
+   private static final List<ResourceProviderMetadata> RESOURCE_PROVIDER_METADATA =
+         Collections.singletonList(VSphereComputeProvider.METADATA);
 
-  protected static final CloudProviderMetadata METADATA = new SimpleCloudProviderMetadataBuilder()
-      .id(ID)
-      .name("vSphere Platform")
-      .description("vSphere Platform provider implementation")
-      .configurationProperties(Collections.<ConfigurationProperty>emptyList())
-      .credentialsProviderMetadata(new SimpleCredentialsProviderMetadata(Collections.<ConfigurationProperty>emptyList()))
-      .resourceProviderMetadata(RESOURCE_PROVIDER_METADATA)
-      .build();
+   protected static final CloudProviderMetadata METADATA = new SimpleCloudProviderMetadataBuilder()
+   .id(ID)
+   .name("vSphere Platform")
+   .description("vSphere Platform provider implementation")
+   .configurationProperties(Collections.<ConfigurationProperty>emptyList())
+   .credentialsProviderMetadata(new SimpleCredentialsProviderMetadata(Collections.<ConfigurationProperty>emptyList()))
+   .resourceProviderMetadata(RESOURCE_PROVIDER_METADATA)
+   .build();
 
+   private ResourcesPlacement resourcesPlacement;
 
-  public VSphereProvider(LocalizationContext rootLocalizationContext) {
-    super(METADATA, rootLocalizationContext);
-  }
+   /**
+    * @return the resourcesPlacement
+    */
+   public ResourcesPlacement getResourcesPlacement() {
+      return resourcesPlacement;
+   }
 
-  @Override
-  public ResourceProvider createResourceProvider(
-      String resourceProviderId, Configured configuration) {
+   /**
+    * @param resourcesPlacement the resourcesPlacement to set
+    */
+   public void setResourcesPlacement(ResourcesPlacement resourcesPlacement) {
+      this.resourcesPlacement = resourcesPlacement;
+   }
 
-    if (VSphereComputeProvider.METADATA.getId().equals(resourceProviderId)) {
-      return new VSphereComputeProvider(configuration, getLocalizationContext());
-    }
+   public VSphereProvider(ResourcesPlacement resourcesPlacement, LocalizationContext rootLocalizationContext) {
+      super(METADATA, rootLocalizationContext);
+      this.resourcesPlacement = resourcesPlacement;
+   }
 
-    throw new NoSuchElementException(
-        String.format("Invalid resource provider ID: %s", resourceProviderId));
-  }
+   @Override
+   public ResourceProvider createResourceProvider(
+         String resourceProviderId, Configured configuration) {
+
+      if (VSphereComputeProvider.METADATA.getId().equals(resourceProviderId)) {
+         return new VSphereComputeProvider(resourcesPlacement, configuration, getLocalizationContext());
+      }
+
+      throw new NoSuchElementException(
+            String.format("Invalid resource provider ID: %s", resourceProviderId));
+   }
 
 }

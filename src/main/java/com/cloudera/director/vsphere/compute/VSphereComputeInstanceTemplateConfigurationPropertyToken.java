@@ -25,7 +25,7 @@ public enum VSphereComputeInstanceTemplateConfigurationPropertyToken
           .configKey("memorySizeGB")
           .name("Memory (GB)")
           .defaultDescription("The memory size (in GB)")
-          .defaultValue("8")
+          .defaultValue("4")
           .required(true)
           .widget(ConfigurationProperty.Widget.NUMBER)
           .type(Property.Type.INTEGER)

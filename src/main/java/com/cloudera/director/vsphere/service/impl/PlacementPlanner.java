@@ -9,6 +9,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.cloudera.director.vsphere.VSphereCredentials;
 import com.cloudera.director.vsphere.compute.apitypes.AllocationType;
 import com.cloudera.director.vsphere.compute.apitypes.DiskScsiControllerType;
 import com.cloudera.director.vsphere.compute.apitypes.DiskSpec;
@@ -23,10 +24,12 @@ import com.cloudera.director.vsphere.compute.apitypes.ResourceSchema;
 import com.cloudera.director.vsphere.exception.VsphereDirectorException;
 import com.cloudera.director.vsphere.resources.DatastoreResource;
 import com.cloudera.director.vsphere.resources.HostResource;
+import com.cloudera.director.vsphere.resourcesplacement.ResourcesPlacement;
+import com.cloudera.director.vsphere.resourcesplacement.VcDatastore;
+import com.cloudera.director.vsphere.resourcesplacement.VcHost;
 import com.cloudera.director.vsphere.service.intf.IPlacementPlanner;
 import com.vmware.vim25.InvalidProperty;
 import com.vmware.vim25.RuntimeFault;
-import com.vmware.vim25.mo.Folder;
 
 /**
  * @author chiq
@@ -35,13 +38,15 @@ import com.vmware.vim25.mo.Folder;
 public class PlacementPlanner implements IPlacementPlanner {
    static final Logger logger = Logger.getLogger(PlacementPlanner.class);
 
+   private final VSphereCredentials credentials;
    private Group group;
-   private final Folder rootFolder;
    private List<HostResource> hostResources;
+   private ResourcesPlacement resourcesPlacement;
 
-   public PlacementPlanner(Folder rootFolder, Group group) throws InvalidProperty, RuntimeFault, RemoteException {
+   public PlacementPlanner(VSphereCredentials credentials, Group group, ResourcesPlacement resourcesPlacement) throws InvalidProperty, RuntimeFault, RemoteException {
+      this.credentials = credentials;
       this.group = group;
-      this.rootFolder = rootFolder;
+      this.resourcesPlacement = resourcesPlacement;
    }
 
    /**
@@ -59,23 +64,24 @@ public class PlacementPlanner implements IPlacementPlanner {
    }
 
    /**
-    * @return the hostResources
+    * @return the resourcesPlacement
     */
-   public List<HostResource> getHostResources() {
-      return hostResources;
+   public ResourcesPlacement getResourcesPlacement() {
+      return resourcesPlacement;
    }
 
    /**
-    * @param hostResources the hostResources to set
+    * @param resourcesPlacement the resourcesPlacement to set
     */
-   public void setHostResources(List<HostResource> hostResources) {
-      this.hostResources = hostResources;
+   public void setResourcesPlacement(ResourcesPlacement resourcesPlacement) {
+      this.resourcesPlacement = resourcesPlacement;
    }
 
    @Override
    public void init() throws Exception {
-      HostResourceManager hostResourceManager = new HostResourceManager(this.rootFolder);
-      this.hostResources = hostResourceManager.filterHostsByNetwork(group.getNetworkName());
+      HostResourceManager hostResourceManager = new HostResourceManager(this.credentials.getServiceInstance().getRootFolder());
+      hostResources = hostResourceManager.filterHostsByNetwork(group.getNetworkName());
+      this.resourcesPlacement.update(this.credentials.getVcServer(), hostResources);
    }
 
    @Override
@@ -148,19 +154,22 @@ public class PlacementPlanner implements IPlacementPlanner {
    private List<DiskSpec> placeUnSeparableDisks(Node node) {
       List<DiskSpec> result = new ArrayList<DiskSpec>();
 
-      HostResource targetHost = getTargetHost(node);
-      DatastoreResource targetDatastore  = targetHost.getNodeTargetDatastore();
+      VcHost targetHost = getTargetHost(node);
+      VcDatastore targetDatastore = targetHost.getNodeTargetDatastore();
+
+      HostResource targetHostResource = HostResource.getHostResourceByName(targetHost.getName(), hostResources);
+      DatastoreResource targetDatastoreResource  = targetHostResource.getDatastore(targetDatastore.getName());
 
       for (DiskSpec disk : node.getDisks()) {
          disk.setTargetDs(targetDatastore.getName());
          targetDatastore.allocate(disk.getSize());
          result.add(disk);
          if (disk.isSystemDisk()) {
-            node.setTargetDatastore(targetDatastore);
+            node.setTargetDatastore(targetDatastoreResource);
          }
          syncUpHostMounts(targetDatastore);
-         node.setTargetHost(targetHost);
-         node.setTargetPool(targetHost.getCluster().getPool());
+         node.setTargetHost(targetHostResource);
+         node.setTargetPool(targetHostResource.getCluster().getPool());
       }
       targetDatastore.setNodesCount(targetDatastore.getNodesCount() + 1);
       targetHost.setNodeTargetDatastore(null);
@@ -168,38 +177,40 @@ public class PlacementPlanner implements IPlacementPlanner {
 
       logger.info("The node " + node.getVmName() + " is placed to host " + node.getTargetHost().getName() + " datastore " + node.getTargetDatastore().getName());
 
+      this.resourcesPlacement.update(this.credentials.getVcServer(), hostResources);
+
       return result;
    }
 
-   private HostResource getTargetHost(Node node) {
-      HostResource targetHost = null;
-      for (HostResource host : hostResources) {
-         if (host.getTargetDatastore(node) == null) {
+   private VcHost getTargetHost(Node node) {
+      VcHost targetVcHost = null;
+      for (VcHost vcHost : resourcesPlacement.getHostsByVcServer(credentials.getVcServer())) {
+         if (vcHost.getTargetDatastore(node) == null) {
             continue;
          }
 
-         if (targetHost == null) {
-            targetHost = host;
+         if (targetVcHost == null) {
+            targetVcHost = vcHost;
          } else {
-            if (targetHost.getNodesCount() > host.getNodesCount()) {
-               targetHost = host;
+            if (targetVcHost.getNodesCount() > vcHost.getNodesCount()) {
+               targetVcHost = vcHost;
             }
          }
       }
 
-      if (targetHost == null) {
+      if (targetVcHost == null) {
          logger.error("placeUnSeparableDisks: not sufficient " + node.getStorageType() + " storage space to place node " + node.getVmName());
          throw new VsphereDirectorException("Not sufficient " + node.getStorageType() + " storage space to place node " + node.getVmName());
       }
 
-      return targetHost;
+      return targetVcHost;
    }
 
-   private void syncUpHostMounts(DatastoreResource datastore) {
+   private void syncUpHostMounts(VcDatastore datastore) {
       for (String hostMount : datastore.getHostMounts()) {
-         for (HostResource host : hostResources) {
-            if (host.getName().equals(hostMount)) {
-               for (DatastoreResource oldDatastore : host.getDatastores()) {
+         for (VcHost vcHost : resourcesPlacement.getHostsByVcServer(credentials.getVcServer())) {
+            if (vcHost.getName().equals(hostMount)) {
+               for (VcDatastore oldDatastore : vcHost.getVcDatastores()) {
                   if (datastore.getName().equals(oldDatastore.getName())) {
                      oldDatastore.setFreeSpace(datastore.getFreeSpace());
                   }

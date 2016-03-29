@@ -5,7 +5,6 @@ package com.cloudera.director.vsphere.resources;
 
 import java.util.List;
 
-import com.cloudera.director.vsphere.compute.apitypes.Node;
 import com.vmware.vim25.ManagedObjectReference;
 
 /**
@@ -19,8 +18,6 @@ public class HostResource {
    private List<DatastoreResource> datastores;
    private List<NetworkResource> networks;
    private ClusterResource cluster;
-   private int nodesCount = 0;
-   private DatastoreResource nodeTargetDatastore;
 
    /**
     * @return the cluster
@@ -92,34 +89,6 @@ public class HostResource {
       this.networks = networks;
    }
 
-   /**
-    * @return the nodesCount
-    */
-   public int getNodesCount() {
-      return nodesCount;
-   }
-
-   /**
-    * @param nodesCount the nodesCount to set
-    */
-   public void setNodesCount(int nodesCount) {
-      this.nodesCount = nodesCount;
-   }
-
-   /**
-    * @return the nodeTargetDatastore
-    */
-   public DatastoreResource getNodeTargetDatastore() {
-      return nodeTargetDatastore;
-   }
-
-   /**
-    * @param nodeTargetDatastore the nodeTargetDatastore to set
-    */
-   public void setNodeTargetDatastore(DatastoreResource nodeTargetDatastore) {
-      this.nodeTargetDatastore = nodeTargetDatastore;
-   }
-
    public DatastoreResource getDatastore(String name) {
       for (DatastoreResource datastore : this.datastores) {
          if (name.equals(datastore.getName())) {
@@ -129,23 +98,12 @@ public class HostResource {
       return null;
    }
 
-   public DatastoreResource getTargetDatastore(Node node) {
-      DatastoreResource targetDatastore = null;
-      for (DatastoreResource datastore : this.datastores) {
-         if (!datastore.canBeAllocated(node) || datastore.getFreeSpace() < node.getTotalDiskSize()) {
-            continue;
-         }
-
-         if (targetDatastore == null) {
-            targetDatastore = datastore;
-         } else {
-             if (targetDatastore.getNodesCount() > datastore.getNodesCount()) {
-                targetDatastore = datastore;
-             }
+   public static HostResource getHostResourceByName(String name, List<HostResource> hostResources) {
+      for (HostResource hostResource : hostResources) {
+         if (name.equals(hostResource.getName())) {
+            return hostResource;
          }
       }
-      this.nodeTargetDatastore = targetDatastore;
-      return targetDatastore;
+      return null;
    }
-
 }

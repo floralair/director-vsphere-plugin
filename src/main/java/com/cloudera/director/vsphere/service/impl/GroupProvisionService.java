@@ -10,11 +10,11 @@ import com.cloudera.director.vsphere.VSphereCredentials;
 import com.cloudera.director.vsphere.compute.VSphereComputeInstanceTemplate;
 import com.cloudera.director.vsphere.compute.apitypes.Group;
 import com.cloudera.director.vsphere.compute.apitypes.Node;
+import com.cloudera.director.vsphere.resourcesplacement.ResourcesPlacement;
 import com.cloudera.director.vsphere.service.intf.IGroupProvisionService;
 import com.cloudera.director.vsphere.service.intf.IPlacementPlanner;
 import com.cloudera.director.vsphere.utils.VmUtil;
 import com.cloudera.director.vsphere.vm.service.impl.VmService;
-import com.vmware.vim25.mo.Folder;
 import com.vmware.vim25.mo.ServiceInstance;
 
 /**
@@ -23,19 +23,35 @@ import com.vmware.vim25.mo.ServiceInstance;
  */
 public class GroupProvisionService implements IGroupProvisionService {
 
+   private VSphereCredentials credentials;
    private Group group;
-   private Folder rootFolder;
    private VmService vmService;
+   private ResourcesPlacement resourcesPlacement;
 
    public GroupProvisionService() {
 
    }
 
-   public GroupProvisionService(VSphereCredentials credentials, VSphereComputeInstanceTemplate template, String prefix, Collection<String> instanceIds, int minCount) throws Exception {
+   public GroupProvisionService(VSphereCredentials credentials, VSphereComputeInstanceTemplate template, String prefix, Collection<String> instanceIds, int minCount, ResourcesPlacement resourcesPlacement) throws Exception {
       ServiceInstance serviceInstance = credentials.getServiceInstance();
-      this.rootFolder = serviceInstance.getRootFolder();
+      this.credentials = credentials;
       this.group = new Group(instanceIds, template, prefix, minCount, VmUtil.getVirtualMachine(serviceInstance, template.getTemplateVm()));
       this.vmService = new VmService(credentials);
+      this.resourcesPlacement = resourcesPlacement;
+   }
+
+   /**
+    * @return the credentials
+    */
+   public VSphereCredentials getCredentials() {
+      return credentials;
+   }
+
+   /**
+    * @param credentials the credentials to set
+    */
+   public void setCredentials(VSphereCredentials credentials) {
+      this.credentials = credentials;
    }
 
    /**
@@ -53,23 +69,6 @@ public class GroupProvisionService implements IGroupProvisionService {
       this.group = group;
    }
 
-
-   /**
-    * @return the rootFolder
-    */
-   public Folder getRootFolder() {
-      return rootFolder;
-   }
-
-
-   /**
-    * @param rootFolder the rootFolder to set
-    */
-   public void setRootFolder(Folder rootFolder) {
-      this.rootFolder = rootFolder;
-   }
-
-
    /**
     * @return the vmService
     */
@@ -77,12 +76,25 @@ public class GroupProvisionService implements IGroupProvisionService {
       return vmService;
    }
 
-
    /**
     * @param vmService the vmService to set
     */
    public void setVmService(VmService vmService) {
       this.vmService = vmService;
+   }
+
+   /**
+    * @return the resourcesPlacement
+    */
+   public ResourcesPlacement getResourcesPlacement() {
+      return resourcesPlacement;
+   }
+
+   /**
+    * @param resourcesPlacement the resourcesPlacement to set
+    */
+   public void setResourcesPlacement(ResourcesPlacement resourcesPlacement) {
+      this.resourcesPlacement = resourcesPlacement;
    }
 
    @Override
@@ -95,7 +107,7 @@ public class GroupProvisionService implements IGroupProvisionService {
    }
 
    public void getPlacementPlan() throws Exception {
-      IPlacementPlanner placementPlanner = new PlacementPlanner(rootFolder, group);
+      IPlacementPlanner placementPlanner = new PlacementPlanner(credentials, group, resourcesPlacement);
       placementPlanner.init();
       placementPlanner.initNodeDisks();
       placementPlanner.placeDisk();

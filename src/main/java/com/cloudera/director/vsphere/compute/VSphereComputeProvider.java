@@ -29,6 +29,8 @@ import com.cloudera.director.spi.v1.provider.util.SimpleResourceProviderMetadata
 import com.cloudera.director.spi.v1.util.ConfigurationPropertiesUtil;
 import com.cloudera.director.vsphere.VSphereCredentials;
 import com.cloudera.director.vsphere.exception.VsphereDirectorException;
+import com.cloudera.director.vsphere.resourcesplacement.ResourcesPlacement;
+import com.cloudera.director.vsphere.resourcesplacement.VcServer;
 import com.cloudera.director.vsphere.service.impl.GroupProvisionService;
 import com.cloudera.director.vsphere.service.impl.GroupTerminateService;
 import com.cloudera.director.vsphere.service.intf.IGroupProvisionService;
@@ -71,7 +73,23 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
 
    private final ConfigurationValidator resourceTemplateConfigurationValidator;
 
-   public VSphereComputeProvider(Configured configuration, LocalizationContext cloudLocalizationContext) {
+   private ResourcesPlacement resourcesPlacement;
+
+   /**
+    * @return the resourcesPlacement
+    */
+   public ResourcesPlacement getResourcesPlacement() {
+      return resourcesPlacement;
+   }
+
+   /**
+    * @param resourcesPlacement the resourcesPlacement to set
+    */
+   public void setResourcesPlacement(ResourcesPlacement resourcesPlacement) {
+      this.resourcesPlacement = resourcesPlacement;
+   }
+
+   public VSphereComputeProvider(ResourcesPlacement resourcesPlacement, Configured configuration, LocalizationContext cloudLocalizationContext) {
       super(configuration, METADATA, cloudLocalizationContext);
 
       String vcServer = configuration.getConfigurationValue(VSphereComputeProviderConfigurationPropertyToken.VC_SERVER, cloudLocalizationContext);
@@ -85,6 +103,13 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
       this.resourceTemplateConfigurationValidator =
             new CompositeConfigurationValidator(METADATA.getResourceTemplateConfigurationValidator(),
                   new VSphereComputeInstanceTemplateConfigurationValidator(this));
+
+      this.resourcesPlacement = resourcesPlacement;
+      List<VcServer> vcServers = this.resourcesPlacement.getVcServers();
+      if (!this.resourcesPlacement.containsVcServer(vcServer)) {
+         vcServers.add(new VcServer(vcServer));
+      }
+      this.resourcesPlacement.setVcServers(vcServers);
    }
 
    @Override
@@ -112,7 +137,7 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
 
       try {
          template.validate(this.credentials);
-         IGroupProvisionService groupProvisionService = new GroupProvisionService(this.credentials, template, template.getConfigurationValue(INSTANCE_NAME_PREFIX, templateLocalizationContext), instanceIds, minCount);
+         IGroupProvisionService groupProvisionService = new GroupProvisionService(this.credentials, template, template.getConfigurationValue(INSTANCE_NAME_PREFIX, templateLocalizationContext), instanceIds, minCount, this.resourcesPlacement);
          groupProvisionService.provision();
       } catch (Exception e) {
          throw new VsphereDirectorException(e);
@@ -195,7 +220,7 @@ extends AbstractComputeProvider<VSphereComputeInstance, VSphereComputeInstanceTe
       LocalizationContext templateLocalizationContext = SimpleResourceTemplate.getTemplateLocalizationContext(providerLocalizationContext);
 
       try {
-         GroupTerminateService groupTerminateService = new GroupTerminateService(this.credentials, template, template.getConfigurationValue(INSTANCE_NAME_PREFIX, templateLocalizationContext), instanceIds);
+         GroupTerminateService groupTerminateService = new GroupTerminateService(this.credentials, template, template.getConfigurationValue(INSTANCE_NAME_PREFIX, templateLocalizationContext), instanceIds, this.resourcesPlacement);
          groupTerminateService.terminate();
       } catch (Exception e) {
          throw new VsphereDirectorException(e);
