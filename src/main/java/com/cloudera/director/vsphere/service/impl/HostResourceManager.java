@@ -48,6 +48,27 @@ public class HostResourceManager implements IHostResourceManager {
    }
 
    @Override
+   public List<String> getNetworkNames() throws InvalidProperty, RuntimeFault, RemoteException {
+      List<String> networkNames = new ArrayList<String>();
+
+      ManagedEntity[] managedEntities = new InventoryNavigator(rootFolder).searchManagedEntities(new String[][] { {"HostSystem", "name" }, }, true);
+      for(ManagedEntity managedEntity : managedEntities) {
+         HostSystem hostSystem = new HostSystem(rootFolder.getServerConnection(), managedEntity.getMOR());
+
+         if (!HostSystemConnectionState.connected.equals(hostSystem.getRuntime().getConnectionState()) || !HostSystemPowerState.poweredOn.equals(hostSystem.getRuntime().getPowerState())) {
+            continue;
+         }
+
+         Network[] networks = hostSystem.getNetworks();
+         for (Network network : networks) {
+            networkNames.add(network.getName());
+         }
+      }
+
+      return networkNames;
+   }
+
+   @Override
    public List<HostResource> filterHostsByNetwork(String networkName) throws InvalidProperty, RuntimeFault, RemoteException {
       List<HostResource> filteredHosts = new ArrayList<HostResource>();
 

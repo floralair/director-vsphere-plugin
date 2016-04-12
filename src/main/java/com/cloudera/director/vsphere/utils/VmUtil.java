@@ -25,6 +25,10 @@ import com.vmware.vim25.mo.VirtualMachine;
  */
 public class VmUtil {
 
+   public static void validateVirtualMachine(ServiceInstance serviceInstance, String vmName) throws Exception {
+      getVirtualMachine(serviceInstance, vmName);
+   }
+
    public static VirtualMachine getVirtualMachine(ServiceInstance serviceInstance, String vmName) throws Exception {
       return getVirtualMachine(serviceInstance, vmName, true);
    }

@@ -25,4 +25,12 @@ public interface IHostResourceManager {
     */
    List<HostResource> filterHostsByNetwork(String networkName) throws InvalidProperty, RuntimeFault, RemoteException;
 
+   /**
+    * @return
+    * @throws RemoteException
+    * @throws RuntimeFault
+    * @throws InvalidProperty
+    */
+   List<String> getNetworkNames() throws InvalidProperty, RuntimeFault, RemoteException;
+
 }

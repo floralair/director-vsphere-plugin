@@ -96,13 +96,13 @@ public static List<ConfigurationProperty> getConfigurationProperties() {
 
   public void validate(VSphereCredentials credentials) {
      try {
-        VmUtil.getVirtualMachine(credentials.getServiceInstance(), templateVm, true);
+        VmUtil.validateVirtualMachine(credentials.getServiceInstance(), templateVm);
      } catch (Exception e) {
         throw new VsphereDirectorException("There is no template VM named " + templateVm + " in the vCenter server.", e);
      }
 
      try {
-        NetworkUtil.getNetwork(credentials.getServiceInstance(), network);
+        NetworkUtil.validateNetwork(credentials.getServiceInstance(), network);
      } catch (Exception e) {
         throw new VsphereDirectorException("There is no network named " + network + " in the vCenter server.", e);
      }
