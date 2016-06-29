@@ -99,7 +99,7 @@ public class HostResourceManager implements IHostResourceManager {
          }
 
          if (networkResources.isEmpty()) {
-            throw new VsphereDirectorException("There is no network named " + networkName +" in the vCenter environment.");
+            continue;
          }
 
          hostResource.setNetworks(networkResources);

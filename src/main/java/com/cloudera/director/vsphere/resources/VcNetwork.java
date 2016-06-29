@@ -16,7 +16,7 @@ import com.vmware.vim25.mo.ServerConnection;
 public class VcNetwork {
 
    private NetworkSummary summary;
-   // The following fields are not null iff this is a DV portgroup.
+   // The following fields are not null if this is a DV portgroup.
    private String portgroupKey = null;
    private String switchUuid = null;
    private boolean isUplink = false;
@@ -27,8 +27,8 @@ public class VcNetwork {
       portgroupKey = null;
       switchUuid = null;
       isUplink = false;
-      if (network instanceof DistributedVirtualPortgroup){
-         DistributedVirtualPortgroup pg = (DistributedVirtualPortgroup) network;
+      if (network instanceof DistributedVirtualPortgroup || network.getSummary().getNetwork().getType().equals("DistributedVirtualPortgroup")){
+         DistributedVirtualPortgroup pg = new DistributedVirtualPortgroup(network.getServerConnection(), network.getMOR());
          DistributedVirtualSwitch dvs =
                new DistributedVirtualSwitch(sc, pg.getConfig().getDistributedVirtualSwitch());
          for (ManagedObjectReference ref : dvs.getConfig().getUplinkPortgroup()) {

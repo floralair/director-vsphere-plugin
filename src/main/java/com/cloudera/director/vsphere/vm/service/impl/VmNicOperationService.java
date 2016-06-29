@@ -3,16 +3,32 @@
  */
 package com.cloudera.director.vsphere.vm.service.impl;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.cloudera.director.vsphere.resources.VcNetwork;
 import com.cloudera.director.vsphere.vm.service.intf.IVmNicOperationService;
-import com.vmware.vim25.*;
+import com.google.gson.Gson;
+import com.vmware.vim25.Description;
+import com.vmware.vim25.ManagedObjectReference;
+import com.vmware.vim25.VirtualDevice;
+import com.vmware.vim25.VirtualDeviceBackingInfo;
+import com.vmware.vim25.VirtualDeviceConfigSpec;
+import com.vmware.vim25.VirtualDeviceConfigSpecOperation;
+import com.vmware.vim25.VirtualDeviceConnectInfo;
+import com.vmware.vim25.VirtualEthernetCard;
+import com.vmware.vim25.VirtualEthernetCardNetworkBackingInfo;
+import com.vmware.vim25.VirtualMachineConfigInfo;
+import com.vmware.vim25.VirtualMachineConfigSpec;
+import com.vmware.vim25.VirtualMachineRuntimeInfo;
+import com.vmware.vim25.VirtualVmxnet3;
 import com.vmware.vim25.mo.HostSystem;
 import com.vmware.vim25.mo.Network;
 import com.vmware.vim25.mo.Task;
 import com.vmware.vim25.mo.VirtualMachine;
 
 public class VmNicOperationService implements IVmNicOperationService{
-
+   private static final Logger logger = LoggerFactory.getLogger(VmNicOperationService.class);
 
    private final VirtualMachine vm;
    private final String operation;
@@ -37,6 +53,8 @@ public class VmNicOperationService implements IVmNicOperationService{
 
       String result = null;
       if(nicSpec!=null) {
+         Gson gson = new Gson();
+         logger.info("The node " + this.vm.getName() + " nicSpec: " + gson.toJson(nicSpec));
          vmConfigSpec.setDeviceChange(new VirtualDeviceConfigSpec []{nicSpec});
          Task task = vm.reconfigVM_Task(vmConfigSpec);
          result = task.waitForMe();
@@ -64,7 +82,7 @@ public class VmNicOperationService implements IVmNicOperationService{
          connectInfo.setStartConnected(true);
 
          if(vcNetwork.isDvPortGroup()) {
-            nicBacking = (VirtualEthernetCardDistributedVirtualPortBackingInfo) vcNetwork.getBackingInfo();
+            nicBacking = vcNetwork.getBackingInfo();
             nic.setBacking(nicBacking);
          }else{
             standardNicBacking = new VirtualEthernetCardNetworkBackingInfo();
@@ -104,7 +122,7 @@ public class VmNicOperationService implements IVmNicOperationService{
                connectInfo.setStartConnected(true);
 
                if(vcNetwork.isDvPortGroup()) {
-                  nicBacking = (VirtualEthernetCardDistributedVirtualPortBackingInfo) vcNetwork.getBackingInfo();
+                  nicBacking = vcNetwork.getBackingInfo();
                   vds[i].setBacking(nicBacking);
                }
                else {
